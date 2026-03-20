@@ -1,2 +1,1004 @@
 <!DOCTYPE html>
-<html><body><h1>English Acquisition Engine</h1></body></html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FLUENCY — 영어 습득 엔진</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1c1c26;
+  --border: rgba(255,255,255,0.07);
+  --text: #f0f0f8;
+  --muted: #7070a0;
+  --accent: #6c63ff;
+  --accent2: #ff6b9d;
+  --accent3: #00d4aa;
+  --warn: #ffb347;
+  --r: 16px;
+  --r2: 24px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: 'Sora','Noto Sans KR',sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── 앱 껍데기 ── */
+#app { max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+
+/* ── 헤더 ── */
+.header {
+  padding: 52px 20px 20px;
+  background: linear-gradient(180deg, rgba(108,99,255,0.15) 0%, transparent 100%);
+}
+.header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+.logo { font-size:1.4rem; font-weight:800; letter-spacing:-0.04em; }
+.logo span { background: linear-gradient(135deg,#6c63ff,#ff6b9d); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.logo sub { font-size:0.55rem; color:var(--muted); font-weight:400; letter-spacing:0.1em; display:block; margin-top:-2px; }
+.progress-badge {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.progress-badge b { color: var(--accent); }
+
+/* ── 탭바 ── */
+.tabbar {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 6px;
+  padding: 0 20px 16px;
+}
+.tab-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 4px;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.tab-btn .tab-icon { font-size: 1.1rem; }
+.tab-btn.active {
+  background: linear-gradient(135deg, rgba(108,99,255,0.25), rgba(255,107,157,0.15));
+  border-color: rgba(108,99,255,0.4);
+  color: var(--text);
+}
+
+/* ── 스크린 ── */
+.screen { display:none; padding: 0 20px 100px; }
+.screen.active { display:block; }
+
+/* ── 카드 리스트 ── */
+.lecture-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.lecture-card:active { transform: scale(0.98); }
+.lecture-card.done { border-color: rgba(0,212,170,0.3); }
+
+.card-num {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 800;
+  flex-shrink: 0;
+}
+.lecture-card.done .card-num {
+  background: linear-gradient(135deg, var(--accent3), #00a88a);
+}
+
+.card-info { flex:1; min-width:0; }
+.card-sentence {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-meta { display:flex; gap:6px; align-items:center; }
+.cefr-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(108,99,255,0.2);
+  color: var(--accent);
+  border: 1px solid rgba(108,99,255,0.3);
+}
+.emotion-tag {
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+.card-arrow { color: var(--muted); font-size: 1rem; }
+
+/* ── 강의 상세 ── */
+#detail { display:none; }
+#detail.active { display:block; }
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 52px 20px 16px;
+}
+.back-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 40px; height: 40px;
+  display: flex; align-items:center; justify-content:center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.detail-title {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.detail-title b { color: var(--text); display:block; font-size:0.9rem; }
+
+.detail-body { padding: 0 20px 100px; }
+
+/* 이미지 */
+.scene-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: var(--r2);
+  margin-bottom: 20px;
+  background: var(--surface2);
+}
+.scene-image-placeholder {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: var(--r2);
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, var(--surface2), var(--surface));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+/* 문장 카드 */
+.sentence-card {
+  background: linear-gradient(135deg, rgba(108,99,255,0.15), rgba(255,107,157,0.08));
+  border: 1px solid rgba(108,99,255,0.25);
+  border-radius: var(--r2);
+  padding: 20px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.main-sentence {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+.phonetic {
+  font-size: 0.8rem;
+  color: var(--accent);
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.meaning-chunks {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* TTS 버튼 */
+.tts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.tts-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px;
+  display: flex; align-items:center; justify-content:center; gap:8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  transition: all 0.2s;
+}
+.tts-btn:active { transform: scale(0.97); }
+.tts-btn.en { border-color: rgba(108,99,255,0.4); color: var(--accent); }
+.tts-btn.kr { border-color: rgba(0,212,170,0.4); color: var(--accent3); }
+.tts-btn.playing { animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+/* 섹션 */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex; align-items:center; gap:6px;
+}
+.section-label::before {
+  content:'';
+  width: 3px; height: 12px;
+  border-radius: 2px;
+  background: linear-gradient(var(--accent), var(--accent2));
+}
+
+.scene-text {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.grammar-text {
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.taboo-text {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--warn);
+  background: rgba(255,179,71,0.08);
+  border-radius: 10px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--warn);
+}
+
+.variation-item {
+  font-size: 0.82rem;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  color: var(--text);
+  border-left: 3px solid rgba(108,99,255,0.4);
+}
+
+.related-item {
+  font-size: 0.78rem;
+  padding: 7px 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  color: var(--muted);
+  border-left: 3px solid rgba(0,212,170,0.3);
+}
+
+.pattern-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent2);
+  font-style: italic;
+  margin-bottom: 8px;
+}
+
+/* 나레이션 */
+.narration-text {
+  font-size: 0.82rem;
+  line-height: 1.9;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.closing-box {
+  background: linear-gradient(135deg, rgba(108,99,255,0.1), rgba(255,107,157,0.08));
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.closing-en {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 4px;
+  font-style: italic;
+}
+.closing-kr {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* 퀴즈 버튼 */
+.quiz-start-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  border-radius: var(--r2);
+  padding: 16px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+  box-shadow: 0 8px 24px rgba(108,99,255,0.3);
+}
+.quiz-start-btn:active { transform: scale(0.98); }
+
+/* ── 퀴즈 화면 ── */
+#quiz-screen { display:none; }
+#quiz-screen.active { display:block; }
+
+.quiz-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 52px 20px 16px;
+}
+.quiz-body { padding: 0 20px 100px; }
+
+.quiz-progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.quiz-progress-dot {
+  flex:1; height:4px; border-radius:2px;
+  background: var(--surface2);
+  transition: background 0.3s;
+}
+.quiz-progress-dot.done { background: var(--accent3); }
+.quiz-progress-dot.active { background: var(--accent); }
+
+.quiz-type-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.quiz-scene {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 14px;
+  line-height: 1.6;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-radius: 12px;
+}
+
+.quiz-question {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--text);
+  margin-bottom: 20px;
+  text-align: center;
+  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--r2);
+  border: 1px solid var(--border);
+}
+
+.quiz-blank { 
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+  padding: 0 4px;
+}
+
+.quiz-options { margin-bottom: 16px; }
+.quiz-option {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+.quiz-option:active { transform: scale(0.98); }
+.quiz-option.correct {
+  background: rgba(0,212,170,0.15);
+  border-color: var(--accent3);
+  color: var(--accent3);
+}
+.quiz-option.wrong {
+  background: rgba(255,107,107,0.12);
+  border-color: rgba(255,107,107,0.5);
+  color: rgba(255,107,107,0.8);
+}
+
+.quiz-feedback {
+  border-radius: var(--r);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  display: none;
+}
+.quiz-feedback.show { display:block; }
+.quiz-feedback.correct { background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.3); color: var(--accent3); }
+.quiz-feedback.wrong { background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.3); color: rgba(255,120,120,0.9); }
+
+.quiz-next-btn {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  display: none;
+  transition: all 0.2s;
+}
+.quiz-next-btn.show { display:block; }
+.quiz-next-btn:active { transform: scale(0.98); }
+
+/* 퀴즈 완료 */
+.quiz-complete {
+  text-align: center;
+  padding: 40px 20px;
+}
+.quiz-complete-icon { font-size: 4rem; margin-bottom: 16px; }
+.quiz-complete-title { font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; }
+.quiz-complete-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 24px; line-height:1.6; }
+.quiz-score {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 24px;
+}
+
+/* ── 진도 화면 ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px;
+  text-align: center;
+}
+.stat-num {
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-label { font-size: 0.72rem; color: var(--muted); }
+
+.progress-list { }
+.progress-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.progress-row-sentence { flex:1; font-size:0.8rem; color:var(--text); min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.progress-status { font-size:0.75rem; font-weight:700; }
+.progress-status.done { color: var(--accent3); }
+.progress-status.pending { color: var(--muted); }
+
+/* 바텀 네비 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left:50%;
+  transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  background: rgba(10,10,15,0.92);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  padding: 8px 16px 20px;
+  gap: 4px;
+  z-index: 100;
+}
+.nav-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+.nav-icon { font-size: 1.3rem; }
+.nav-btn.active { color: var(--accent); }
+.nav-btn.active .nav-icon { filter: drop-shadow(0 0 6px rgba(108,99,255,0.6)); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 메인 화면 -->
+  <div id="main-view">
+    <div class="header">
+      <div class="header-top">
+        <div class="logo">
+          <span>FLUENCY</span>
+          <sub>ENGLISH ACQUISITION ENGINE</sub>
+        </div>
+        <div class="progress-badge">완료 <b id="done-count">0</b>/10</div>
+      </div>
+    </div>
+
+    <div class="tabbar">
+      <button class="tab-btn active" onclick="filterList('all',this)">
+        <span class="tab-icon">📚</span>전체
+      </button>
+      <button class="tab-btn" onclick="filterList('todo',this)">
+        <span class="tab-icon">🎯</span>미학습
+      </button>
+      <button class="tab-btn" onclick="filterList('done',this)">
+        <span class="tab-icon">✅</span>완료
+      </button>
+    </div>
+
+    <div class="screen active" id="list-screen">
+      <div id="lecture-list"></div>
+    </div>
+  </div>
+
+  <!-- 강의 상세 -->
+  <div id="detail">
+    <div class="detail-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <div class="detail-title">
+        <span id="detail-lecture-id"></span>
+        <b id="detail-sentence-short"></b>
+      </div>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+  </div>
+
+  <!-- 퀴즈 화면 -->
+  <div id="quiz-screen">
+    <div class="quiz-header">
+      <button class="back-btn" onclick="closeQuiz()">←</button>
+      <div class="detail-title">
+        <span>퀴즈</span>
+        <b id="quiz-sentence-label"></b>
+      </div>
+    </div>
+    <div class="quiz-body" id="quiz-body"></div>
+  </div>
+
+  <!-- 진도 화면 -->
+  <div id="stats-view" style="display:none;">
+    <div class="header">
+      <div class="header-top">
+        <div class="logo"><span>진도</span><sub>MY PROGRESS</sub></div>
+      </div>
+    </div>
+    <div style="padding:0 20px 100px;">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-num" id="stat-done">0</div>
+          <div class="stat-label">완료한 강의</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-quiz">0</div>
+          <div class="stat-label">퀴즈 통과</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-streak">0</div>
+          <div class="stat-label">연속 학습일</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-total">10</div>
+          <div class="stat-label">전체 표현</div>
+        </div>
+      </div>
+      <div class="progress-list" id="progress-list"></div>
+    </div>
+  </div>
+
+  <!-- 바텀 네비 -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="showView('home')">
+      <span class="nav-icon">🏠</span>홈
+    </button>
+    <button class="nav-btn" id="nav-stats" onclick="showView('stats')">
+      <span class="nav-icon">📊</span>진도
+    </button>
+    <button class="nav-btn" id="nav-settings" onclick="showView('settings')">
+      <span class="nav-icon">⚙️</span>설정
+    </button>
+  </nav>
+
+</div>
+
+<script>
+// ── 데이터 ──────────────────────────────────────────────
+const LECTURES = [
+  {"id":"LECTURE_001","image_id":"IMG_001","cefr":"A2","sentence":"I'll let you know when I get there.","phonetic":"아일 렛 유 노우 웬 아이 겟 데어","meaning":"아일(나는 할게) / 렛유노우(알려줄게) / 웬아이겟데어(거기 도착하면)","tts":"아일 렛 유 노우. 웬 아이 겟 데어.","scene":"친구가 걱정하며 도착하면 연락해달라고 했다. 나는 알겠다고 답한다.","emotion":"Relief","social":"Reassurance","grammar":"will + 동사원형으로 즉흥적 약속 표현. when절은 현재시제 사용.","taboo":"격식체 이메일이나 공식 발표에서는 어색함. 가까운 사이 또는 구어체 전용.","pattern":"I'll let you know + [시간/조건]","variations":["I'll let you know later.","I'll let you know after the meeting.","I'll let you know as soon as I hear back."],"related":["I'll tell you when I get there.","I'll text you when I arrive.","I'll update you once I land."],"blank_quiz":{"Target_Type":"Phrasal Verb","Blank_Sentence":"I'll ___ you ___ when I get there.","Distractors":["tell / about","give / up","show / off"]},"situation_quiz":{"Scene_KR":"친구가 늦은 밤 도착하면 연락해달라고 부탁했다.","Options":["I'll let you know when I get there.","I'll call you before I leave.","I'm on my way right now."],"Answer_Index":0},"variation_quiz":{"Stem":"I'll let you know ___","Acceptable":["later","tomorrow","after the meeting","as soon as I can","after I check"]},"acceptable":["I'll let you know when I get there.","I'll let you know when I arrive.","I'll let you know once I get there."],"narration":"이 문장은 상대방을 안심시킬 때 쓰는 표현입니다. 렛 유 노우는 알려주다라는 뜻입니다. 웬 아이 겟 데어는 도착하면이라는 조건을 나타냅니다. 이 두 덩어리를 합치면 도착하면 알려줄게 라는 자연스러운 약속 표현이 됩니다. 문법을 외우려 하지 말고. 상황과 함께 통째로 익혀두세요.","closing_en":"Don't memorize it. Feel it, then use it.","closing_kr":"외우지 마세요. 느끼고. 그냥 쓰세요."},
+  {"id":"LECTURE_002","image_id":"IMG_002","cefr":"B1","sentence":"I'll get back to you as soon as I can.","phonetic":"아일 겟 백 투 유 애즈 순 애즈 아이 캔","meaning":"아일(나는 할게) / 겟백투유(너에게 다시 연락을) / 애즈순애즈아이캔(내가 가능한 한 빨리)","tts":"아일 겟 백 투 유. 애즈 순 애즈 아이 캔.","scene":"업무 회의 중에 동료가 자료를 요청했다. 나는 지금 바쁘지만 나중에 꼭 확인해주겠다고 약속하며 자리로 돌아간다.","emotion":"Relief","social":"Professional Reassurance","grammar":"will을 사용한 미래 약속과 as soon as 접속사를 활용한 시간 조건절의 결합.","taboo":"지키지 못할 약속일 때는 사용하지 않음. 비즈니스 이메일이나 대화에서 매우 빈번하게 사용됨.","pattern":"I'll get back to you + [시간/조건]","variations":["I'll get back to you later today.","I'll get back to you by tomorrow morning.","I'll get back to you after checking the files."],"related":["I'll report back to you after the meeting.","I'll write back to you by tonight.","I'll reply to you as soon as I can."],"blank_quiz":{"Target_Type":"Phrasal Verb","Blank_Sentence":"I'll ___ ___ to you as soon as I can.","Distractors":["take / off","look / for","come / over"]},"situation_quiz":{"Scene_KR":"직장 동료가 질문을 했지만 지금 당장 답을 해줄 수 없는 상황이다.","Options":["I'll get back to you as soon as I can.","I can do it right now.","I don't know the answer."],"Answer_Index":0},"variation_quiz":{"Stem":"I'll get back to you ___","Acceptable":["tomorrow","by noon","later","as soon as possible","after the break"]},"acceptable":["I'll get back to you as soon as I can.","I'll get back to you as soon as possible.","I will get back to you as soon as I can."],"narration":"업무 중에 정말 많이 쓰는 표현입니다. 겟 백 투 유는 상대방에게 다시 연락하겠다는 뜻입니다. 애즈 순 애즈 아이 캔은 내가 가능한 한 빨리라는 의미입니다. 이 문장을 쓰면 상대방에게 신뢰를 줄 수 있습니다. 정중하면서도 확신에 찬 목소리로 연습해 보세요.","closing_en":"Consistency builds trust. Keep it up.","closing_kr":"꾸준함이 신뢰를 만듭니다. 계속 힘내세요."},
+  {"id":"LECTURE_003","image_id":"IMG_003","cefr":"A2","sentence":"That's not like you at all.","phonetic":"댓츠 낫 라이크 유 앳 올","meaning":"댓츠낫라이크유(그건 너답지 않아) / 앳올(전혀)","tts":"댓츠 낫 라이크 유. 앳 올.","scene":"친구가 평소와 다르게 약속을 펑크냈다. 나는 걱정과 놀라움으로 그 친구에게 말한다.","emotion":"Anxiety","social":"Concern Expression","grammar":"That is not like + 사람 구조로 상대방의 평소 성격과 다른 행동을 지적할 때 사용.","taboo":"비난이 아닌 걱정의 뉘앙스로 사용해야 함. 화난 톤으로 쓰면 공격적으로 들릴 수 있음.","pattern":"That's not like + [PERSON] + at all","variations":["That's not like him at all.","That's not like her to be so quiet.","That's not like you to give up so easily."],"related":["You're not yourself today.","Something seems off about you.","This doesn't seem like you."],"blank_quiz":{"Target_Type":"Fixed Expression","Blank_Sentence":"That's not ___ you at all.","Distractors":["about","of","with"]},"situation_quiz":{"Scene_KR":"평소에 항상 시간을 잘 지키는 친구가 오늘 갑자기 약속에 늦었다.","Options":["That's not like you at all.","You're always late anyway.","I knew you'd be late."],"Answer_Index":0},"variation_quiz":{"Stem":"That's not like ___ at all.","Acceptable":["you","him","her","them","her to do that"]},"acceptable":["That's not like you at all.","That's not like you.","This is not like you at all."],"narration":"이 표현은 상대방이 평소와 다른 행동을 할 때 걱정을 담아 말하는 표현입니다. 낫 라이크 유는 너답지 않다는 뜻입니다. 앳 올을 붙이면 전혀 너답지 않다는 강조가 됩니다. 비난이 아니라 걱정과 관심을 담아서 말하는 표현이에요. 친한 친구에게 자연스럽게 써보세요.","closing_en":"Sometimes caring sounds like this.","closing_kr":"때로는 걱정이 이런 말로 나와요."},
+  {"id":"LECTURE_004","image_id":"IMG_004","cefr":"B1","sentence":"I didn't mean to make you feel that way.","phonetic":"아이 디든트 민 투 메이크 유 필 댓 웨이","meaning":"아이디든트민(나는 의도하지 않았어) / 투메이크유필(네가 느끼게 만들려고) / 댓웨이(그런 식으로)","tts":"아이 디든트 민 투. 메이크 유 필 댓 웨이.","scene":"내가 한 말이 친구를 상처 입혔다는 걸 뒤늦게 깨달았다. 나는 진심으로 미안함을 전하며 말한다.","emotion":"Regret","social":"Sincere Apology","grammar":"didn't mean to + 동사원형 구조로 의도하지 않은 행동에 대한 사과를 표현.","taboo":"변명처럼 들릴 수 있으므로 진심 어린 톤이 반드시 필요함. 가벼운 상황보다 진지한 감정 충돌 후에 사용.","pattern":"I didn't mean to + VERB","variations":["I didn't mean to hurt you.","I didn't mean to make you cry.","I didn't mean to say it like that."],"related":["That came out wrong.","I never meant to say that.","I'm sorry if I made you feel that way."],"blank_quiz":{"Target_Type":"Verb Pattern","Blank_Sentence":"I didn't ___ to make you feel that way.","Distractors":["want","try","plan"]},"situation_quiz":{"Scene_KR":"내가 한 농담이 친구를 상처 입혔다는 걸 뒤늦게 알게 됐다.","Options":["I didn't mean to make you feel that way.","I was just joking, don't be so sensitive.","I said sorry already."],"Answer_Index":0},"variation_quiz":{"Stem":"I didn't mean to ___","Acceptable":["hurt you","upset you","offend you","make you cry","say that"]},"acceptable":["I didn't mean to make you feel that way.","I didn't mean to make you feel like that.","I never meant to make you feel that way."],"narration":"이 표현은 상대방에게 진심으로 사과할 때 쓰는 표현입니다. 디든트 민 투는 그러려고 한 게 아니었다는 뜻입니다. 메이크 유 필 댓 웨이는 그런 식으로 느끼게 만들다라는 의미입니다. 단순한 쏘리보다 훨씬 진심이 담긴 표현이에요. 감정이 상한 상황에서 천천히. 부드럽게 말해보세요.","closing_en":"A real apology explains, not excuses.","closing_kr":"진짜 사과는 변명이 아니라 마음을 전하는 거예요."},
+  {"id":"LECTURE_005","image_id":"IMG_005","cefr":"B1","sentence":"It slipped my mind completely.","phonetic":"잇 슬립트 마이 마인드 컴플리틀리","meaning":"잇슬립트마이마인드(머릿속에서 빠져나갔어) / 컴플리틀리(완전히)","tts":"잇 슬립트 마이 마인드. 컴플리틀리.","scene":"친구와 약속을 잡았는데 완전히 잊어버렸다. 친구가 어디 있냐고 연락하자 당황하며 말한다.","emotion":"Anxiety","social":"Excuse with Apology","grammar":"It slipped my mind는 주어가 It으로 고정된 관용 표현. 과거형으로만 사용하며 능동 망각이 아닌 자연스럽게 잊혀진 뉘앙스.","taboo":"의도적으로 무시하거나 중요한 약속을 잊었을 때 쓰면 가볍게 들려 역효과가 날 수 있음. 일상적인 깜빡임에 적합.","pattern":"It slipped my mind + ADVERB","variations":["It slipped my mind, sorry.","It completely slipped my mind.","I'm so sorry, it just slipped my mind."],"related":["I totally forgot about it.","It went right out of my head.","I can't believe I forgot."],"blank_quiz":{"Target_Type":"Fixed Expression","Blank_Sentence":"It ___ my mind completely.","Distractors":["crossed","changed","left"]},"situation_quiz":{"Scene_KR":"친구와 오늘 만나기로 했는데 완전히 잊고 다른 일을 하고 있었다.","Options":["It slipped my mind completely.","I decided not to come.","I thought it was tomorrow."],"Answer_Index":0},"variation_quiz":{"Stem":"It slipped my mind ___","Acceptable":["completely","totally","honestly","somehow","sorry"]},"acceptable":["It slipped my mind completely.","It completely slipped my mind.","It slipped my mind."],"narration":"이 표현은 무언가를 완전히 잊어버렸을 때 쓰는 표현입니다. 슬립트 마이 마인드는 머릿속에서 빠져나갔다는 뜻입니다. 컴플리틀리를 붙이면 완전히 잊었다는 강조가 됩니다. 아이 포갓보다 훨씬 자연스럽고 원어민스러운 표현이에요. 깜빡했을 때 바로 써보세요.","closing_en":"It happens. Just say it naturally.","closing_kr":"누구나 잊어요. 자연스럽게 말하면 돼요."},
+  {"id":"LECTURE_006","image_id":"IMG_006","cefr":"A2","sentence":"I'm not in the mood for that right now.","phonetic":"아임 낫 인 더 무드 포 댓 라잇 나우","meaning":"아임낫인더무드(지금 그럴 기분이 아니야) / 포댓(그것에 대해) / 라잇나우(지금 당장)","tts":"아임 낫 인 더 무드. 포 댓. 라잇 나우.","scene":"친구가 신나게 놀자고 제안했지만 나는 지쳐있거나 기분이 안 좋다. 거절하지만 공격적이지 않게 말한다.","emotion":"Tension","social":"Soft Refusal","grammar":"not in the mood for + 명사 또는 동명사 구조. 현재 감정 상태로 부드럽게 거절할 때 사용.","taboo":"상대방 제안을 거절할 때 쓰므로 톤이 너무 차갑지 않게 유지해야 함. 격식체 상황에서는 어색함.","pattern":"I'm not in the mood for + OBJECT","variations":["I'm not in the mood for pizza tonight.","I'm not in the mood for going out.","I'm not really in the mood for talking right now."],"related":["I'm just not feeling it today.","Maybe some other time.","I need some time to myself."],"blank_quiz":{"Target_Type":"Fixed Expression","Blank_Sentence":"I'm not in the ___ for that right now.","Distractors":["mind","place","feeling"]},"situation_quiz":{"Scene_KR":"친구가 오늘 밤 파티에 가자고 했지만 나는 피곤하고 혼자 있고 싶다.","Options":["I'm not in the mood for that right now.","I already have plans tonight.","Sounds great. I'll be there."],"Answer_Index":0},"variation_quiz":{"Stem":"I'm not in the mood for ___","Acceptable":["that","going out","talking","jokes","pizza","it"]},"acceptable":["I'm not in the mood for that right now.","I'm not in the mood for that.","I'm not really in the mood for that right now."],"narration":"이 표현은 지금 무언가를 할 기분이 아닐 때 부드럽게 거절하는 표현입니다. 낫 인 더 무드는 그럴 기분이 아니다라는 뜻입니다. 포 댓을 붙이면 그것에 대해 기분이 아니다라는 의미가 됩니다. 라잇 나우를 추가하면 지금 당장은이라는 시간 뉘앙스가 생겨요. 화내지 않고 자연스럽게 거절할 때 써보세요.","closing_en":"It's okay to say no. Just say it kindly.","closing_kr":"거절해도 괜찮아요. 부드럽게 말하면 돼요."},
+  {"id":"LECTURE_007","image_id":"IMG_007","cefr":"B1","sentence":"You should have told me sooner.","phonetic":"유 슈드 해브 톨드 미 수너","meaning":"유슈드해브(너는 했어야 했는데) / 톨드미(나한테 말해줬어야) / 수너(더 일찍)","tts":"유 슈드 해브 톨드 미. 수너.","scene":"친구가 중요한 일을 뒤늦게 알려줬다. 이미 늦어버린 상황에서 아쉬움과 섭섭함을 담아 말한다.","emotion":"Tension","social":"Mild Reproach","grammar":"should have + 과거분사 구조로 과거에 하지 않은 행동에 대한 아쉬움 또는 가벼운 질책을 표현.","taboo":"톤이 강하면 비난처럼 들릴 수 있음. 친한 사이에서 아쉬움을 표현할 때 적합하며 공식적인 자리에서는 피하는 것이 좋음.","pattern":"You should have + VERB + me + ADVERB","variations":["You should have told me earlier.","You should have called me sooner.","You should have let me know before."],"related":["Why didn't you tell me sooner?","I wish you had told me earlier.","I could have helped if you'd told me."],"blank_quiz":{"Target_Type":"Modal Perfect","Blank_Sentence":"You should ___ told me sooner.","Distractors":["would","could","must"]},"situation_quiz":{"Scene_KR":"친구가 중요한 시험이 내일이라는 걸 오늘 저녁에 알려줬다. 미리 알았으면 도와줄 수 있었다.","Options":["You should have told me sooner.","It's okay. I understand.","Why do you always do this?"],"Answer_Index":0},"variation_quiz":{"Stem":"You should have told me ___","Acceptable":["sooner","earlier","before","right away","yesterday"]},"acceptable":["You should have told me sooner.","You should have told me earlier.","You should have let me know sooner."],"narration":"이 표현은 상대방이 중요한 것을 늦게 알려줬을 때 아쉬움을 담아 말하는 표현입니다. 슈드 해브 톨드는 말해줬어야 했는데라는 뜻입니다. 수너를 붙이면 더 일찍이라는 아쉬움이 강조됩니다. 비난보다는 섭섭함의 뉘앙스로 말할 때 자연스러워요. 친한 친구 사이에서 편하게 써보세요.","closing_en":"It's not too late to be honest next time.","closing_kr":"다음번엔 더 일찍 말해줘요."},
+  {"id":"LECTURE_008","image_id":"IMG_008","cefr":"B1","sentence":"I can't believe how fast time flies.","phonetic":"아이 캔트 빌리브 하우 패스트 타임 플라이즈","meaning":"아이캔트빌리브(믿기지 않아) / 하우패스트(얼마나 빠른지) / 타임플라이즈(시간이 날아가는지)","tts":"아이 캔트 빌리브. 하우 패스트 타임 플라이즈.","scene":"오랜만에 만난 친구와 이야기하다가 시간이 훌쩍 지나버렸다. 또는 졸업이나 생일처럼 시간의 흐름을 실감하는 순간에 말한다.","emotion":"Longing","social":"Shared Sentiment","grammar":"I can't believe how + 형용사 + 주어 + 동사 구조로 놀라움을 간접적으로 표현. how절이 명사절로 사용됨.","taboo":"격식체 문서나 공식 발표에서는 어색함. 감탄이나 회상의 순간에 자연스럽게 쓰이는 구어 표현.","pattern":"I can't believe how + ADJ + time flies","variations":["I can't believe how much you've grown.","I can't believe how quickly it went by.","I can't believe how long it's been."],"related":["Time really flies, doesn't it.","It feels like just yesterday.","Where did the time go."],"blank_quiz":{"Target_Type":"Exclamatory Clause","Blank_Sentence":"I can't believe how fast time ___.","Distractors":["runs","moves","passes"]},"situation_quiz":{"Scene_KR":"친구와 카페에서 이야기하다 보니 어느새 세 시간이 지나 있었다.","Options":["I can't believe how fast time flies.","We've been here for too long.","Time is going really slowly today."],"Answer_Index":0},"variation_quiz":{"Stem":"I can't believe how ___ time flies.","Acceptable":["fast","quickly","insanely fast","incredibly fast","ridiculously fast"]},"acceptable":["I can't believe how fast time flies.","I can't believe how quickly time flies.","I can't believe how fast time goes."],"narration":"이 표현은 시간이 빠르게 흘렀을 때 감탄하며 쓰는 표현입니다. 캔트 빌리브는 믿기지 않는다는 뜻입니다. 하우 패스트는 얼마나 빠른지라는 의미입니다. 타임 플라이즈는 시간이 날아간다는 영어 관용 표현입니다. 졸업식이나 오랜만의 만남에서 자연스럽게 써보세요.","closing_en":"Time flies. Make it count.","closing_kr":"시간은 빠르게 가요. 잘 쓰세요."},
+  {"id":"LECTURE_009","image_id":"IMG_009","cefr":"B2","sentence":"It's been a while since we last hung out.","phonetic":"잇츠 빈 어 와일 신스 위 래스트 헝 아웃","meaning":"잇츠빈어와일(꽤 됐어) / 신스위래스트(우리가 마지막으로) / 헝아웃(같이 놀았던 게)","tts":"잇츠 빈 어 와일. 신스 위 래스트 헝 아웃.","scene":"오랫동안 못 만났던 친구를 우연히 또는 약속을 잡아서 다시 만났다. 반가움과 그리움을 담아 첫 마디를 건넨다.","emotion":"Longing","social":"Warm Reconnection","grammar":"It has been a while since + 주어 + 과거동사 구조. 현재완료로 과거부터 현재까지의 시간 경과를 자연스럽게 표현.","taboo":"격식체 상황에서는 어색함. 친한 사이에서 오랜만에 만날 때 쓰는 구어 표현. hang out은 캐주얼한 만남에만 적합.","pattern":"It's been a while since + EVENT","variations":["It's been a while since we talked.","It's been a while since I saw you last.","It's been a while since we grabbed coffee."],"related":["Long time no see.","It feels like forever.","We really need to do this more often."],"blank_quiz":{"Target_Type":"Present Perfect","Blank_Sentence":"It's been a while since we last ___ out.","Distractors":["went","stayed","chilled"]},"situation_quiz":{"Scene_KR":"6개월 만에 친한 친구를 카페에서 다시 만났다.","Options":["It's been a while since we last hung out.","We hang out every week.","I missed our last meetup."],"Answer_Index":0},"variation_quiz":{"Stem":"It's been a while since ___","Acceptable":["we last hung out","we talked","I saw you","we grabbed coffee","we did this"]},"acceptable":["It's been a while since we last hung out.","It's been a while since we hung out.","It has been a while since we last hung out."],"narration":"이 표현은 오랫동안 못 만났던 사람을 다시 만났을 때 쓰는 표현입니다. 잇츠 빈 어 와일은 꽤 됐다는 뜻입니다. 신스 위 래스트 헝 아웃은 우리가 마지막으로 같이 어울렸던 이후로라는 의미입니다. 헝 아웃은 친구들과 편하게 어울려 논다는 뜻의 구어 표현입니다. 오랜만에 만난 친구에게 자연스럽게 건네보세요.","closing_en":"Old friends. New moments. Always worth it.","closing_kr":"오래된 친구와의 새로운 순간. 언제나 소중해요."},
+  {"id":"LECTURE_010","image_id":"IMG_010","cefr":"B2","sentence":"Don't take it personally. I'm just being honest.","phonetic":"돈트 테이크 잇 퍼스널리. 아임 저스트 비잉 어니스트.","meaning":"돈트테이크잇퍼스널리(개인적으로 받아들이지 마) / 아임저스트비잉어니스트(나는 그냥 솔직한 거야)","tts":"돈트 테이크 잇 퍼스널리. 아임 저스트 비잉 어니스트.","scene":"친구에게 솔직한 의견을 말했는데 상대방이 상처받을 수도 있는 상황이다. 나쁜 의도가 없음을 먼저 밝히며 말한다.","emotion":"Neutral","social":"Honest Disclaimer","grammar":"Don't take it personally는 명령문 부정형 고정 표현. I'm just being + 형용사 구조로 현재 자신의 태도나 상태를 설명.","taboo":"이 말 자체가 오히려 상대방을 더 불편하게 만들 수 있음. 진심 어린 톤이 없으면 무례하게 들릴 수 있으므로 주의.","pattern":"I'm just being + ADJECTIVE","variations":["I'm just being real with you.","I'm just being straightforward.","I'm just being careful."],"related":["No offense. but I think you should know.","I say this because I care.","I'm telling you this as a friend."],"blank_quiz":{"Target_Type":"Fixed Expression","Blank_Sentence":"Don't take it ___. I'm just being honest.","Distractors":["seriously","badly","hardly"]},"situation_quiz":{"Scene_KR":"친구의 발표 내용에 문제가 있다고 솔직하게 말해줘야 하는 상황이다.","Options":["Don't take it personally. I'm just being honest.","Your presentation was perfect.","I don't think I should say anything."],"Answer_Index":0},"variation_quiz":{"Stem":"I'm just being ___","Acceptable":["honest","real","straightforward","careful","direct","a good friend"]},"acceptable":["Don't take it personally. I'm just being honest.","Don't take it personally. I'm just being real.","Don't take it personally. I'm just being straightforward."],"narration":"이 표현은 솔직한 말을 하기 전에 상대방을 배려하며 쓰는 표현입니다. 돈트 테이크 잇 퍼스널리는 개인적으로 받아들이지 말라는 뜻입니다. 아임 저스트 비잉 어니스트는 나는 그냥 솔직한 것뿐이라는 의미입니다. 이 두 문장을 함께 쓰면 비판이 아닌 배려로 들릴 수 있어요. 진심 어린 톤으로 천천히 말해보세요.","closing_en":"Honesty with care is the best kind.","closing_kr":"배려 있는 솔직함이 가장 좋은 솔직함이에요."}
+];
+
+// ── 상태 ──────────────────────────────────────────────
+let state = JSON.parse(localStorage.getItem('fluency_state') || '{"done":[],"quizDone":[],"streak":0,"lastStudy":""}');
+let currentLecture = null;
+let currentFilter = 'all';
+let quizData = null;
+let quizStep = 0;
+let quizScore = 0;
+
+function saveState() { localStorage.setItem('fluency_state', JSON.stringify(state)); }
+
+// ── 감정 이모지 매핑 ──
+const EMOTION_EMOJI = {
+  Relief:'😌', Regret:'😔', Anxiety:'😟', Tension:'😤',
+  Longing:'🥹', Joy:'😊', Neutral:'😐', Care:'🤍'
+};
+
+// ── 리스트 렌더 ──────────────────────────────────────
+function renderList(filter='all') {
+  currentFilter = filter;
+  const list = document.getElementById('lecture-list');
+  const filtered = LECTURES.filter(l => {
+    if(filter==='done') return state.done.includes(l.id);
+    if(filter==='todo') return !state.done.includes(l.id);
+    return true;
+  });
+  list.innerHTML = filtered.map((l,i) => {
+    const num = l.id.replace('LECTURE_','');
+    const done = state.done.includes(l.id);
+    const emoji = EMOTION_EMOJI[l.emotion] || '💬';
+    return `<div class="lecture-card ${done?'done':''}" onclick="openLecture('${l.id}')">
+      <div class="card-num">${done?'✓':num}</div>
+      <div class="card-info">
+        <div class="card-sentence">${l.sentence}</div>
+        <div class="card-meta">
+          <span class="cefr-badge">${l.cefr}</span>
+          <span class="emotion-tag">${emoji} ${l.emotion}</span>
+        </div>
+      </div>
+      <span class="card-arrow">›</span>
+    </div>`;
+  }).join('');
+  document.getElementById('done-count').textContent = state.done.length;
+}
+
+function filterList(filter, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList(filter);
+}
+
+// ── 강의 열기 ──────────────────────────────────────
+function openLecture(id) {
+  currentLecture = LECTURES.find(l=>l.id===id);
+  if(!currentLecture) return;
+  const l = currentLecture;
+  const num = l.id.replace('LECTURE_','');
+
+  document.getElementById('detail-lecture-id').textContent = l.id;
+  document.getElementById('detail-sentence-short').textContent = l.sentence.substring(0,30)+'...';
+
+  const imgId = l.image_id;
+  const imgHtml = `<img class="scene-image" src="images/${imgId}.jpg" onerror="this.outerHTML='<div class=\\'scene-image-placeholder\\'>🎬</div>'" alt="scene">`;
+
+  const variationsHtml = l.variations.map(v=>`<div class="variation-item">• ${v}</div>`).join('');
+  const relatedHtml = l.related.map(r=>`<div class="related-item">→ ${r}</div>`).join('');
+
+  document.getElementById('detail-body').innerHTML = `
+    ${imgHtml}
+    <div class="sentence-card">
+      <div class="main-sentence">${l.sentence}</div>
+      <div class="phonetic">${l.phonetic}</div>
+      <div class="meaning-chunks">${l.meaning}</div>
+    </div>
+    <div class="tts-row">
+      <button class="tts-btn en" onclick="speak('${l.sentence.replace(/'/g,"\\'")}','en')">
+        🔊 영어 듣기
+      </button>
+      <button class="tts-btn kr" onclick="speak('${l.tts.replace(/'/g,"\\'")}','ko')">
+        🔊 발음 듣기
+      </button>
+    </div>
+    <div class="section">
+      <div class="section-label">상황 & 감정</div>
+      <div class="scene-text">${l.scene}</div>
+    </div>
+    <div class="section">
+      <div class="section-label">패턴</div>
+      <div class="pattern-text">${l.pattern}</div>
+      ${variationsHtml}
+    </div>
+    <div class="section">
+      <div class="section-label">문법 포인트</div>
+      <div class="grammar-text">${l.grammar}</div>
+      <div class="taboo-text">⚠️ ${l.taboo}</div>
+    </div>
+    <div class="section">
+      <div class="section-label">관련 표현</div>
+      ${relatedHtml}
+    </div>
+    <div class="section">
+      <div class="section-label">강사 나레이션</div>
+      <div class="narration-text">${l.narration}</div>
+      <button class="tts-btn kr" style="width:100%;justify-content:center;" onclick="speak('${l.narration.replace(/'/g,"\\'")}','ko')">
+        🎙️ 나레이션 듣기
+      </button>
+      <div class="closing-box" style="margin-top:12px;">
+        <div class="closing-en">${l.closing_en}</div>
+        <div class="closing-kr">${l.closing_kr}</div>
+      </div>
+    </div>
+    <button class="quiz-start-btn" onclick="startQuiz('${l.id}')">
+      🎯 퀴즈 시작하기
+    </button>
+  `;
+
+  document.getElementById('main-view').style.display='none';
+  document.getElementById('detail').classList.add('active');
+  document.getElementById('quiz-screen').classList.remove('active');
+  window.scrollTo(0,0);
+}
+
+function goBack() {
+  document.getElementById('detail').classList.remove('active');
+  document.getElementById('main-view').style.display='block';
+  renderList(currentFilter);
+}
+
+// ── TTS ──────────────────────────────────────────────
+function speak(text, lang) {
+  if(!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang==='en' ? 'en-US' : 'ko-KR';
+  u.rate = lang==='en' ? 0.85 : 0.9;
+  window.speechSynthesis.speak(u);
+}
+
+// ── 퀴즈 ──────────────────────────────────────────────
+function startQuiz(id) {
+  currentLecture = LECTURES.find(l=>l.id===id);
+  if(!currentLecture) return;
+  quizStep = 0;
+  quizScore = 0;
+
+  const l = currentLecture;
+  quizData = [
+    { type:'blank',   data: l.blank_quiz,    answer: l.sentence },
+    { type:'situation', data: l.situation_quiz, answer: null },
+    { type:'variation', data: l.variation_quiz, answer: null }
+  ];
+
+  document.getElementById('quiz-sentence-label').textContent = l.sentence.substring(0,25)+'...';
+  document.getElementById('detail').classList.remove('active');
+  document.getElementById('quiz-screen').classList.add('active');
+  renderQuiz();
+  window.scrollTo(0,0);
+}
+
+function renderQuiz() {
+  const body = document.getElementById('quiz-body');
+  if(quizStep >= quizData.length) { renderQuizComplete(); return; }
+
+  const q = quizData[quizStep];
+  const dotsHtml = quizData.map((_,i)=>`<div class="quiz-progress-dot ${i<quizStep?'done':i===quizStep?'active':''}"></div>`).join('');
+
+  let html = `<div class="quiz-progress">${dotsHtml}</div>`;
+
+  if(q.type==='blank') {
+    const opts = shuffle([currentLecture.sentence, ...q.data.Distractors.map(d=>d)]);
+    const blankSentence = q.data.Blank_Sentence.replace(/_+/g, '<span class="quiz-blank">___</span>');
+    html += `
+      <div class="quiz-type-label">🔤 빈칸 채우기</div>
+      <div class="quiz-question">${blankSentence}</div>
+      <div class="quiz-options">
+        ${opts.map((o,i)=>`<button class="quiz-option" onclick="checkBlank(this,'${escQ(o)}','${escQ(currentLecture.sentence)}')">${o}</button>`).join('')}
+      </div>`;
+  } else if(q.type==='situation') {
+    const opts = q.data.Options;
+    html += `
+      <div class="quiz-type-label">🎭 상황 판단</div>
+      <div class="quiz-scene">📍 ${q.data.Scene_KR}</div>
+      <div class="quiz-question">이 상황에서 가장 자연스러운 표현은?</div>
+      <div class="quiz-options">
+        ${opts.map((o,i)=>`<button class="quiz-option" onclick="checkSituation(this,${i},${q.data.Answer_Index})">${o}</button>`).join('')}
+      </div>`;
+  } else {
+    html += `
+      <div class="quiz-type-label">✏️ 변형 완성</div>
+      <div class="quiz-question">"${q.data.Stem}"<br><small style="color:var(--muted);font-size:0.75rem;">빈칸에 들어갈 표현을 입력하세요</small></div>
+      <input id="variation-input" type="text" placeholder="영어로 입력..." 
+        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;font-family:inherit;font-size:0.9rem;color:var(--text);margin-bottom:12px;outline:none;">
+      <button class="quiz-next-btn show" onclick="checkVariation()" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;">
+        확인하기
+      </button>`;
+  }
+
+  html += `<div class="quiz-feedback" id="quiz-feedback"></div>
+           <button class="quiz-next-btn" id="quiz-next" onclick="nextQuiz()">다음 →</button>`;
+
+  body.innerHTML = html;
+}
+
+function checkBlank(btn, selected, correct) {
+  document.querySelectorAll('.quiz-option').forEach(b=>b.disabled=true);
+  const isCorrect = selected.toLowerCase().trim() === correct.toLowerCase().trim();
+  btn.classList.add(isCorrect?'correct':'wrong');
+  if(!isCorrect) document.querySelectorAll('.quiz-option').forEach(b=>{ if(b.textContent.trim()===correct) b.classList.add('correct'); });
+  showFeedback(isCorrect, correct);
+  if(isCorrect) quizScore++;
+}
+
+function checkSituation(btn, idx, correct) {
+  document.querySelectorAll('.quiz-option').forEach(b=>b.disabled=true);
+  const isCorrect = idx===correct;
+  btn.classList.add(isCorrect?'correct':'wrong');
+  if(!isCorrect) document.querySelectorAll('.quiz-option')[correct].classList.add('correct');
+  showFeedback(isCorrect, quizData[quizStep].data.Options[correct]);
+  if(isCorrect) quizScore++;
+}
+
+function checkVariation() {
+  const input = document.getElementById('variation-input');
+  const val = input.value.trim().toLowerCase();
+  const acceptable = quizData[quizStep].data.Acceptable.map(a=>a.toLowerCase());
+  const isCorrect = acceptable.some(a => val.includes(a) || a.includes(val));
+  input.style.borderColor = isCorrect ? 'var(--accent3)' : 'rgba(255,107,107,0.5)';
+  document.querySelector('.quiz-next-btn.show').style.display='none';
+  showFeedback(isCorrect, quizData[quizStep].data.Acceptable[0]);
+  if(isCorrect) quizScore++;
+}
+
+function showFeedback(isCorrect, correct) {
+  const fb = document.getElementById('quiz-feedback');
+  fb.className = `quiz-feedback show ${isCorrect?'correct':'wrong'}`;
+  fb.innerHTML = isCorrect
+    ? `✅ 정확해요! <b>${correct}</b>`
+    : `❌ 정답: <b>${correct}</b>`;
+  document.getElementById('quiz-next').classList.add('show');
+}
+
+function nextQuiz() {
+  quizStep++;
+  renderQuiz();
+  window.scrollTo(0,0);
+}
+
+function renderQuizComplete() {
+  const l = currentLecture;
+  if(!state.done.includes(l.id)) state.done.push(l.id);
+  if(!state.quizDone.includes(l.id)) state.quizDone.push(l.id);
+  saveState();
+
+  const pct = Math.round((quizScore/quizData.length)*100);
+  document.getElementById('quiz-body').innerHTML = `
+    <div class="quiz-complete">
+      <div class="quiz-complete-icon">${pct===100?'🎉':pct>=66?'👍':'💪'}</div>
+      <div class="quiz-complete-title">${pct===100?'완벽해요!':pct>=66?'잘했어요!':'다시 도전해봐요'}</div>
+      <div class="quiz-score">${quizScore}/${quizData.length}</div>
+      <div class="quiz-complete-sub">${l.closing_kr}<br><br><i style="color:var(--accent);font-size:0.8rem;">"${l.closing_en}"</i></div>
+      <button class="quiz-start-btn" onclick="closeQuiz()" style="margin-bottom:10px;">← 목록으로</button>
+      <button class="quiz-start-btn" onclick="startQuiz('${l.id}')" style="background:var(--surface2);box-shadow:none;border:1px solid var(--border);color:var(--text);">🔄 다시 풀기</button>
+    </div>`;
+}
+
+function closeQuiz() {
+  document.getElementById('quiz-screen').classList.remove('active');
+  document.getElementById('detail').classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── 유틸 ──
+function shuffle(arr) { return [...arr].sort(()=>Math.random()-0.5); }
+function escQ(s) { return s.replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+// ── 뷰 전환 ──────────────────────────────────────────
+function showView(view) {
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`nav-${view==='home'?'home':view==='stats'?'stats':'settings'}`).classList.add('active');
+
+  document.getElementById('main-view').style.display = view==='home'?'block':'none';
+  document.getElementById('stats-view').style.display = view==='stats'?'block':'none';
+  document.getElementById('detail').classList.remove('active');
+  document.getElementById('quiz-screen').classList.remove('active');
+
+  if(view==='stats') renderStats();
+  window.scrollTo(0,0);
+}
+
+function renderStats() {
+  document.getElementById('stat-done').textContent = state.done.length;
+  document.getElementById('stat-quiz').textContent = state.quizDone.length;
+  document.getElementById('stat-streak').textContent = state.streak || 0;
+
+  document.getElementById('progress-list').innerHTML = LECTURES.map(l=>{
+    const done = state.done.includes(l.id);
+    const quiz = state.quizDone.includes(l.id);
+    return `<div class="progress-row">
+      <span style="font-size:0.75rem;color:var(--muted);flex-shrink:0;">${l.id.replace('LECTURE_','')}</span>
+      <span class="progress-row-sentence">${l.sentence}</span>
+      <span class="progress-status ${done?'done':'pending'}">${done?(quiz?'✅':'📖'):'○'}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── 초기화 ──
+renderList();
+</script>
+</body>
+</html>
