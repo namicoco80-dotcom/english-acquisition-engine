@@ -354,6 +354,8 @@ body { font-family:'Sora','Noto Sans KR',sans-serif; background:var(--bg); color
     </div>
     <div class="sec-lbl">🏅 뱃지</div>
     <div class="badges" id="badges"></div>
+    <div class="sec-lbl">🧠 패턴 숙달도</div>
+    <div id="mastery-summary"></div>
     <div class="sec-lbl">📚 강의 진도</div>
     <div id="prog-list"></div>
   </div>
@@ -370,20 +372,132 @@ body { font-family:'Sora','Noto Sans KR',sans-serif; background:var(--bg); color
 'use strict';
 
 // ════════════════════════════════════════════
-// DATA
+// DATA — Sentence Database (patterns 태깅)
 // ════════════════════════════════════════════
 const LECTURES = [
-  {id:"L001",img:"IMG_001",cefr:"A2",s:"I'll let you know when I get there.",ph:"아일 렛 유 노우 웬 아이 겟 데어",scene:"친구가 걱정하며 도착하면 연락해달라고 했다. 나는 알겠다고 답한다.",emo:"Relief",social:"Reassurance",cen:"Don't memorize it. Feel it, then use it.",ckr:"외우지 마세요. 느끼고. 그냥 쓰세요.",slot_acc:["I arrive","I land","I finish","I check"]},
-  {id:"L002",img:"IMG_002",cefr:"B1",s:"I'll get back to you as soon as I can.",ph:"아일 겟 백 투 유 애즈 순 애즈 아이 캔",scene:"업무 회의 중에 동료가 자료를 요청했다. 나는 지금 바쁘지만 나중에 꼭 확인해주겠다고 약속한다.",emo:"Relief",social:"Professional Reassurance",cen:"Consistency builds trust. Keep it up.",ckr:"꾸준함이 신뢰를 만듭니다.",slot_acc:["later today","tomorrow morning","after I check","by end of day"]},
-  {id:"L003",img:"IMG_003",cefr:"A2",s:"That's not like you at all.",ph:"댓츠 낫 라이크 유 앳 올",scene:"친구가 평소와 다르게 약속을 펑크냈다. 나는 걱정과 놀라움으로 그 친구에게 말한다.",emo:"Anxiety",social:"Concern Expression",cen:"Sometimes caring sounds like this.",ckr:"때로는 걱정이 이런 말로 나와요.",slot_acc:["him","her","them","us"]},
-  {id:"L004",img:"IMG_004",cefr:"B1",s:"I didn't mean to make you feel that way.",ph:"아이 디든트 민 투 메이크 유 필 댓 웨이",scene:"내가 한 말이 친구를 상처 입혔다는 걸 뒤늦게 깨달았다.",emo:"Regret",social:"Sincere Apology",cen:"A real apology explains, not excuses.",ckr:"진짜 사과는 변명이 아니라 마음을 전하는 거예요.",slot_acc:["hurt you","upset you","embarrass you","worry you"]},
-  {id:"L005",img:"IMG_005",cefr:"B1",s:"It slipped my mind completely.",ph:"잇 슬립트 마이 마인드 컴플리틀리",scene:"친구와 약속을 잡았는데 완전히 잊어버렸다.",emo:"Anxiety",social:"Excuse with Apology",cen:"It happens. Just say it naturally.",ckr:"누구나 잊어요. 자연스럽게 말하면 돼요.",slot_acc:["completely","totally","honestly","somehow"]},
-  {id:"L006",img:"IMG_006",cefr:"A2",s:"I'm not in the mood for that right now.",ph:"아임 낫 인 더 무드 포 댓 라잇 나우",scene:"친구가 신나게 놀자고 제안했지만 나는 지쳐있거나 기분이 안 좋다.",emo:"Tension",social:"Soft Refusal",cen:"It's okay to say no. Just say it kindly.",ckr:"거절해도 괜찮아요. 부드럽게 말하면 돼요.",slot_acc:["going out","talking","jokes","it"]},
-  {id:"L007",img:"IMG_007",cefr:"B1",s:"You should have told me sooner.",ph:"유 슈드 해브 톨드 미 수너",scene:"친구가 중요한 일을 뒤늦게 알려줬다.",emo:"Tension",social:"Mild Reproach",cen:"It's not too late to be honest next time.",ckr:"다음번엔 더 일찍 말해줘요.",slot_acc:["sooner","earlier","yesterday","right away"]},
-  {id:"L008",img:"IMG_008",cefr:"B1",s:"I can't believe how fast time flies.",ph:"아이 캔트 빌리브 하우 패스트 타임 플라이즈",scene:"오랜만에 만난 친구와 이야기하다가 시간이 훌쩍 지나버렸다.",emo:"Longing",social:"Shared Sentiment",cen:"Time flies. Make it count.",ckr:"시간은 빠르게 가요. 잘 쓰세요.",slot_acc:["fast","quickly","soon","differently"]},
-  {id:"L009",img:"IMG_009",cefr:"B2",s:"It's been a while since we last hung out.",ph:"잇츠 빈 어 와일 신스 위 래스트 헝 아웃",scene:"오랫동안 못 만났던 친구를 다시 만났다.",emo:"Longing",social:"Warm Reconnection",cen:"Old friends. New moments. Always worth it.",ckr:"오래된 친구와의 새로운 순간. 언제나 소중해요.",slot_acc:["we talked","we met","I saw you","we did this"]},
-  {id:"L010",img:"IMG_010",cefr:"B2",s:"Don't take it personally. I'm just being honest.",ph:"돈트 테이크 잇 퍼스널리. 아임 저스트 비잉 어니스트.",scene:"친구에게 솔직한 의견을 말했는데 상대방이 상처받을 수도 있는 상황이다.",emo:"Neutral",social:"Honest Disclaimer",cen:"Honesty with care is the best kind.",ckr:"배려 있는 솔직함이 가장 좋은 솔직함이에요.",slot_acc:["honest","real","direct","careful"]}
+  {id:"L001",img:"IMG_001",cefr:"A2",
+   s:"I'll let you know when I get there.",
+   ph:"아일 렛 유 노우 웬 아이 겟 데어",
+   scene:"친구가 걱정하며 도착하면 연락해달라고 했다. 나는 알겠다고 답한다.",
+   emo:"Relief",social:"Reassurance",
+   cen:"Don't memorize it. Feel it, then use it.",ckr:"외우지 마세요. 느끼고. 그냥 쓰세요.",
+   slot_acc:["I arrive","I land","I finish","I check"],
+   patterns:["let_you_know","when_clause","future_promise"]},
+
+  {id:"L002",img:"IMG_002",cefr:"B1",
+   s:"I'll get back to you as soon as I can.",
+   ph:"아일 겟 백 투 유 애즈 순 애즈 아이 캔",
+   scene:"업무 회의 중에 동료가 자료를 요청했다. 나는 지금 바쁘지만 나중에 꼭 확인해주겠다고 약속한다.",
+   emo:"Relief",social:"Professional Reassurance",
+   cen:"Consistency builds trust. Keep it up.",ckr:"꾸준함이 신뢰를 만듭니다.",
+   slot_acc:["later today","tomorrow morning","after I check","by end of day"],
+   patterns:["get_back_to","as_soon_as","future_promise"]},
+
+  {id:"L003",img:"IMG_003",cefr:"A2",
+   s:"That's not like you at all.",
+   ph:"댓츠 낫 라이크 유 앳 올",
+   scene:"친구가 평소와 다르게 약속을 펑크냈다. 나는 걱정과 놀라움으로 그 친구에게 말한다.",
+   emo:"Anxiety",social:"Concern Expression",
+   cen:"Sometimes caring sounds like this.",ckr:"때로는 걱정이 이런 말로 나와요.",
+   slot_acc:["him","her","them","us"],
+   patterns:["not_like_you","fixed_expression","concern"]},
+
+  {id:"L004",img:"IMG_004",cefr:"B1",
+   s:"I didn't mean to make you feel that way.",
+   ph:"아이 디든트 민 투 메이크 유 필 댓 웨이",
+   scene:"내가 한 말이 친구를 상처 입혔다는 걸 뒤늦게 깨달았다.",
+   emo:"Regret",social:"Sincere Apology",
+   cen:"A real apology explains, not excuses.",ckr:"진짜 사과는 변명이 아니라 마음을 전하는 거예요.",
+   slot_acc:["hurt you","upset you","embarrass you","worry you"],
+   patterns:["didnt_mean_to","make_feel","apology"]},
+
+  {id:"L005",img:"IMG_005",cefr:"B1",
+   s:"It slipped my mind completely.",
+   ph:"잇 슬립트 마이 마인드 컴플리틀리",
+   scene:"친구와 약속을 잡았는데 완전히 잊어버렸다.",
+   emo:"Anxiety",social:"Excuse with Apology",
+   cen:"It happens. Just say it naturally.",ckr:"누구나 잊어요. 자연스럽게 말하면 돼요.",
+   slot_acc:["completely","totally","honestly","somehow"],
+   patterns:["slip_mind","fixed_expression","apology"]},
+
+  {id:"L006",img:"IMG_006",cefr:"A2",
+   s:"I'm not in the mood for that right now.",
+   ph:"아임 낫 인 더 무드 포 댓 라잇 나우",
+   scene:"친구가 신나게 놀자고 제안했지만 나는 지쳐있거나 기분이 안 좋다.",
+   emo:"Tension",social:"Soft Refusal",
+   cen:"It's okay to say no. Just say it kindly.",ckr:"거절해도 괜찮아요. 부드럽게 말하면 돼요.",
+   slot_acc:["going out","talking","jokes","it"],
+   patterns:["not_in_mood","soft_refusal","emotion_state"]},
+
+  {id:"L007",img:"IMG_007",cefr:"B1",
+   s:"You should have told me sooner.",
+   ph:"유 슈드 해브 톨드 미 수너",
+   scene:"친구가 중요한 일을 뒤늦게 알려줬다.",
+   emo:"Tension",social:"Mild Reproach",
+   cen:"It's not too late to be honest next time.",ckr:"다음번엔 더 일찍 말해줘요.",
+   slot_acc:["sooner","earlier","yesterday","right away"],
+   patterns:["should_have","past_regret","mild_reproach"]},
+
+  {id:"L008",img:"IMG_008",cefr:"B1",
+   s:"I can't believe how fast time flies.",
+   ph:"아이 캔트 빌리브 하우 패스트 타임 플라이즈",
+   scene:"오랜만에 만난 친구와 이야기하다가 시간이 훌쩍 지나버렸다.",
+   emo:"Longing",social:"Shared Sentiment",
+   cen:"Time flies. Make it count.",ckr:"시간은 빠르게 가요. 잘 쓰세요.",
+   slot_acc:["fast","quickly","soon","differently"],
+   patterns:["cant_believe","how_clause","time_expression"]},
+
+  {id:"L009",img:"IMG_009",cefr:"B2",
+   s:"It's been a while since we last hung out.",
+   ph:"잇츠 빈 어 와일 신스 위 래스트 헝 아웃",
+   scene:"오랫동안 못 만났던 친구를 다시 만났다.",
+   emo:"Longing",social:"Warm Reconnection",
+   cen:"Old friends. New moments. Always worth it.",ckr:"오래된 친구와의 새로운 순간. 언제나 소중해요.",
+   slot_acc:["we talked","we met","I saw you","we did this"],
+   patterns:["its_been_while","since_clause","reconnection"]},
+
+  {id:"L010",img:"IMG_010",cefr:"B2",
+   s:"Don't take it personally. I'm just being honest.",
+   ph:"돈트 테이크 잇 퍼스널리. 아임 저스트 비잉 어니스트.",
+   scene:"친구에게 솔직한 의견을 말했는데 상대방이 상처받을 수도 있는 상황이다.",
+   emo:"Neutral",social:"Honest Disclaimer",
+   cen:"Honesty with care is the best kind.",ckr:"배려 있는 솔직함이 가장 좋은 솔직함이에요.",
+   slot_acc:["honest","real","direct","careful"],
+   patterns:["dont_take_personally","just_being","disclaimer"]}
 ];
+
+// ════════════════════════════════════════════
+// PATTERN GRAPH
+// ════════════════════════════════════════════
+const PATTERN_GRAPH = {
+  "let_you_know":       {next:["let_you_know_when","keep_you_posted","get_back_to"], difficulty:"A2", frequency:0.92},
+  "get_back_to":        {next:["as_soon_as","future_promise","let_you_know"],        difficulty:"B1", frequency:0.88},
+  "future_promise":     {next:["let_you_know","get_back_to","when_clause"],          difficulty:"A2", frequency:0.90},
+  "when_clause":        {next:["since_clause","how_clause","as_soon_as"],            difficulty:"A2", frequency:0.85},
+  "as_soon_as":         {next:["when_clause","after_clause","future_promise"],       difficulty:"B1", frequency:0.80},
+  "not_like_you":       {next:["concern","emotion_state","fixed_expression"],        difficulty:"A2", frequency:0.75},
+  "concern":            {next:["not_like_you","apology","soft_refusal"],             difficulty:"A2", frequency:0.78},
+  "didnt_mean_to":      {next:["apology","make_feel","mild_reproach"],               difficulty:"B1", frequency:0.72},
+  "apology":            {next:["didnt_mean_to","slip_mind","disclaimer"],            difficulty:"A2", frequency:0.82},
+  "make_feel":          {next:["apology","emotion_state","didnt_mean_to"],           difficulty:"B1", frequency:0.68},
+  "slip_mind":          {next:["apology","fixed_expression","past_regret"],          difficulty:"B1", frequency:0.70},
+  "fixed_expression":   {next:["slip_mind","not_like_you","dont_take_personally"],  difficulty:"A2", frequency:0.88},
+  "not_in_mood":        {next:["soft_refusal","emotion_state","concern"],            difficulty:"A2", frequency:0.76},
+  "soft_refusal":       {next:["not_in_mood","disclaimer","concern"],               difficulty:"A2", frequency:0.74},
+  "emotion_state":      {next:["not_in_mood","not_like_you","concern"],              difficulty:"A2", frequency:0.80},
+  "should_have":        {next:["past_regret","mild_reproach","didnt_mean_to"],       difficulty:"B1", frequency:0.78},
+  "past_regret":        {next:["should_have","apology","slip_mind"],                 difficulty:"B1", frequency:0.72},
+  "mild_reproach":      {next:["should_have","concern","not_like_you"],              difficulty:"B1", frequency:0.68},
+  "cant_believe":       {next:["how_clause","time_expression","reconnection"],       difficulty:"B1", frequency:0.82},
+  "how_clause":         {next:["cant_believe","when_clause","since_clause"],         difficulty:"B1", frequency:0.78},
+  "time_expression":    {next:["cant_believe","its_been_while","reconnection"],      difficulty:"B1", frequency:0.75},
+  "its_been_while":     {next:["reconnection","since_clause","time_expression"],     difficulty:"B2", frequency:0.70},
+  "since_clause":       {next:["its_been_while","when_clause","reconnection"],       difficulty:"B2", frequency:0.72},
+  "reconnection":       {next:["its_been_while","time_expression","concern"],        difficulty:"B2", frequency:0.68},
+  "dont_take_personally":{next:["disclaimer","just_being","apology"],               difficulty:"B2", frequency:0.65},
+  "just_being":         {next:["dont_take_personally","disclaimer","emotion_state"], difficulty:"B2", frequency:0.62},
+  "disclaimer":         {next:["dont_take_personally","just_being","soft_refusal"],  difficulty:"B2", frequency:0.60}
+};
 
 const LEVELS = [
   {lv:1,nm:"입문자",ico:"🌱",xp:0},{lv:2,nm:"패턴 탐험가",ico:"🔍",xp:100},
@@ -402,6 +516,312 @@ const BADGES = [
   {id:"perfect",nm:"퍼펙트",ico:"⭐",fn:s=>Object.values(s.quiz_scores||{}).some(v=>v===3)}
 ];
 const EICO = {Relief:'😌',Regret:'😔',Anxiety:'😟',Tension:'😤',Longing:'🥹',Joy:'😊',Neutral:'😐'};
+
+// ════════════════════════════════════════════
+// ACQUISITION ENGINE v2
+// ════════════════════════════════════════════
+
+// ── 1. Pattern Index (확장성 핵심) ──────────
+// 전체 탐색 금지. 패턴 → 문장 ID 역색인
+const PATTERN_INDEX = (function() {
+  const idx = {};
+  LECTURES.forEach(l => {
+    (l.patterns || []).forEach(p => {
+      if (!idx[p]) idx[p] = [];
+      idx[p].push(l.id);
+    });
+  });
+  return idx;
+})();
+
+// ── 2. User Memory Model ─────────────────────
+function getDefaultUserModel() {
+  return {
+    pattern_mastery:  {},   // {pattern_id: 0.0~1.0}
+    memory_strength:  {},   // {sentence_id: 0.0~1.0}
+    hesitation_score: {},   // {pattern_id: 0.0~1.0}
+    error_history:    {},   // {pattern_id: count}
+    last_review_time: {},   // {sentence_id: ISO string}
+    emotion_weight:   {},   // {sentence_id: 0.0~1.0} — 감정 강도 가중치
+    total_sessions:   0,
+    total_correct:    0,
+    total_attempts:   0
+  };
+}
+function loadUserModel() {
+  try {
+    const s = localStorage.getItem('fluency_user_model_v2');
+    return s ? JSON.parse(s) : getDefaultUserModel();
+  } catch(e) { return getDefaultUserModel(); }
+}
+function saveUserModel(m) {
+  localStorage.setItem('fluency_user_model_v2', JSON.stringify(m));
+}
+
+// ── 3. Forgetting Curve (시간 기반 감쇠) ─────
+const DECAY_PARAMS = {
+  weak:   0.7,   // 하루 30% 감쇠
+  medium: 0.85,  // 하루 15% 감쇠
+  strong: 0.95   // 하루 5% 감쇠
+};
+function applyDecay(strength, hoursSince) {
+  const days = hoursSince / 24;
+  const level = strength >= 0.7 ? 'strong' : strength >= 0.4 ? 'medium' : 'weak';
+  const rate = DECAY_PARAMS[level];
+  return strength * Math.pow(rate, days);
+}
+function getDecayedStrength(sentenceId, userModel) {
+  const raw = userModel.memory_strength[sentenceId] || 0;
+  const lastTime = userModel.last_review_time[sentenceId];
+  if (!lastTime) return raw;
+  const hours = (Date.now() - new Date(lastTime).getTime()) / 3600000;
+  return applyDecay(raw, hours);
+}
+
+// ── 4. Memory Update (시간 + 감정 포함) ──────
+function updateMemory(userModel, sentence, result) {
+  const patterns = sentence.patterns || [];
+  const speedBonus = result.responseTime < 3 ? 0.10
+                   : result.responseTime < 6 ? 0.06 : 0.03;
+
+  patterns.forEach(p => {
+    if (userModel.pattern_mastery[p]  === undefined) userModel.pattern_mastery[p]  = 0;
+    if (userModel.error_history[p]    === undefined) userModel.error_history[p]    = 0;
+    if (userModel.hesitation_score[p] === undefined) userModel.hesitation_score[p] = 0;
+
+    if (result.correct) {
+      userModel.pattern_mastery[p] = Math.min(1, userModel.pattern_mastery[p] + speedBonus);
+      if (result.responseTime > 6)
+        userModel.hesitation_score[p] = Math.min(1, userModel.hesitation_score[p] + 0.1);
+    } else {
+      userModel.pattern_mastery[p] = Math.max(0, userModel.pattern_mastery[p] - 0.04);
+      userModel.error_history[p]++;
+      userModel.hesitation_score[p] = Math.min(1, userModel.hesitation_score[p] + 0.2);
+    }
+    userModel.pattern_mastery[p] = Math.max(0, Math.min(1, userModel.pattern_mastery[p]));
+  });
+
+  // memory_strength: decay 적용 후 업데이트
+  const decayed = getDecayedStrength(sentence.id, userModel);
+  const emotionBoost = userModel.emotion_weight[sentence.id] || 0;
+  const delta = result.correct
+    ? 0.12 + emotionBoost * 0.05   // 감정 강한 문장 → 더 많이 강화
+    : -0.06;
+  userModel.memory_strength[sentence.id] = Math.max(0, Math.min(1, decayed + delta));
+  userModel.last_review_time[sentence.id] = new Date().toISOString();
+
+  userModel.total_attempts++;
+  if (result.correct) userModel.total_correct++;
+
+  saveUserModel(userModel);
+  return userModel;
+}
+
+// ── 5. 감정 가중치 기록 ─────────────────────
+function recordEmotionWeight(sentenceId, emotionTag, userModel) {
+  const HIGH_EMOTION = ['Regret','Anxiety','Tension','Longing'];
+  const weight = HIGH_EMOTION.includes(emotionTag) ? 0.8 : 0.3;
+  userModel.emotion_weight[sentenceId] = weight;
+}
+
+// ── 6. Priority Calculation (강화됨) ─────────
+function calculatePriority(sentence, userModel) {
+  const patterns = sentence.patterns || [];
+  let masteryScore = 0, errorScore = 0, hesitScore = 0;
+
+  patterns.forEach(p => {
+    masteryScore += (1 - (userModel.pattern_mastery[p] || 0));
+    errorScore   += (userModel.error_history[p] || 0) * 0.5;
+    hesitScore   += (userModel.hesitation_score[p] || 0) * 0.8;
+  });
+  const pLen = Math.max(1, patterns.length);
+
+  // recency: 마지막 복습으로부터 경과 시간
+  const lastTime = userModel.last_review_time[sentence.id];
+  const hoursSince = lastTime
+    ? (Date.now() - new Date(lastTime).getTime()) / 3600000
+    : 999; // 한 번도 안 한 건 최대 우선
+  const recencyScore = Math.min(1, hoursSince / 48); // 48시간 기준 정규화
+
+  // 감정 가중치
+  const emotionBoost = (userModel.emotion_weight[sentence.id] || 0) * 0.15;
+
+  // variety: 약간의 랜덤성 (지루함 방지)
+  const randomScore = Math.random() * 0.1;
+
+  const priority =
+    (masteryScore / pLen) * 0.40 +
+    (errorScore   / pLen) * 0.20 +
+    recencyScore           * 0.30 +
+    randomScore            * 0.10 +
+    emotionBoost;
+
+  // 이미 완료된 건 낮추되 배제 X (복습 필요)
+  return S.done.includes(sentence.id) ? priority * 0.45 : priority;
+}
+
+// ── 7. Sentence Selection Engine (인덱스 기반) ──
+function selectNextSentence(userModel) {
+  // 1. 가장 mastery 낮은 패턴 top3 추출
+  const weakPatterns = Object.entries(userModel.pattern_mastery)
+    .sort(([,a],[,b]) => a - b)
+    .slice(0, 3)
+    .map(([p]) => p);
+
+  // 아직 mastery 기록 없는 패턴도 포함
+  const allPatterns = [...new Set([
+    ...weakPatterns,
+    ...LECTURES.flatMap(l => l.patterns || []).filter(p => !userModel.pattern_mastery[p])
+  ])].slice(0, 5);
+
+  // 2. 해당 패턴 인덱스에서 후보 문장만 조회 (전체 탐색 X)
+  const candidateIds = new Set();
+  allPatterns.forEach(p => {
+    (PATTERN_INDEX[p] || []).forEach(id => candidateIds.add(id));
+  });
+
+  // 후보가 없으면 전체 fallback
+  const candidates = candidateIds.size > 0
+    ? LECTURES.filter(l => candidateIds.has(l.id))
+    : LECTURES;
+
+  // 3. 후보 중 우선순위 계산
+  return candidates.sort((a,b) =>
+    calculatePriority(b, userModel) - calculatePriority(a, userModel)
+  )[0] || LECTURES[0];
+}
+
+// ── 8. Pattern Graph 다음 추천 ───────────────
+function getNextRecommendedPatterns(userModel) {
+  const sorted = Object.entries(userModel.pattern_mastery)
+    .sort(([,a],[,b]) => a - b).slice(0, 3);
+  const recommended = new Set();
+  sorted.forEach(([p]) => {
+    const node = PATTERN_GRAPH[p];
+    if (node) node.next.forEach(n => recommended.add(n));
+  });
+  return [...recommended].slice(0, 3);
+}
+
+// ── 9. Event Log System ──────────────────────
+const eventLog = [];
+function logEvent(type, data = {}) {
+  eventLog.push({
+    type,
+    step: state.step,
+    sentenceId: LECTURES[state.lessonIdx]?.id,
+    timestamp: Date.now(),
+    ...data
+  });
+  // 로컬 저장 (최근 200개만)
+  try {
+    const stored = JSON.parse(localStorage.getItem('fluency_events') || '[]');
+    stored.push({ type, step: state.step, ts: Date.now(), ...data });
+    localStorage.setItem('fluency_events', JSON.stringify(stored.slice(-200)));
+  } catch(e) {}
+}
+
+// ── 10. Stall Detection (이탈 방지) ──────────
+let stallTimer = null;
+function startStallDetection() {
+  clearStallDetection();
+  // 5초 미입력 → 힌트 자동
+  stallTimer = setTimeout(() => {
+    logEvent('STALL_5S');
+    autoShowHint();
+  }, 5000);
+}
+function clearStallDetection() {
+  if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
+}
+function autoShowHint() {
+  if (state.step === 8 && state.freeHintLevel === 0) {
+    showFreeHint(1, '', '', '');
+    logEvent('AUTO_HINT_SHOWN');
+    // 10초 더 후 선택지 제공
+    stallTimer = setTimeout(() => {
+      if (state.freeHintLevel < 2) {
+        showFreeHint(2, '', '', '');
+        logEvent('AUTO_CHOICES_SHOWN');
+      }
+    }, 10000);
+  }
+}
+
+// ── 11. Free Output 의미 기반 평가 ───────────
+function evaluateFreeOutput(input, sentence, modelAnswer) {
+  const inp = input.toLowerCase().trim();
+  const model = (modelAnswer || sentence.s).toLowerCase();
+
+  // 기준 1: 패턴 핵심 단어 포함 여부
+  const keyWords = (sentence.patterns || []).flatMap(p =>
+    p.split('_').filter(w => w.length > 2)
+  );
+  const keyMatch = keyWords.filter(w => inp.includes(w)).length;
+  const keyScore = keyMatch / Math.max(1, keyWords.length);
+
+  // 기준 2: 모범 답안 핵심 단어 포함
+  const modelWords = model.split(' ').filter(w => w.length > 2);
+  const modelMatch = modelWords.filter(w => inp.includes(w)).length;
+  const modelScore = modelMatch / Math.max(1, modelWords.length);
+
+  // 기준 3: 길이 유사도 (너무 짧으면 감점)
+  const lenScore = Math.min(1, inp.split(' ').length / Math.max(1, model.split(' ').length));
+
+  // 2개 이상 기준 통과시 정답
+  const scores = [keyScore >= 0.4, modelScore >= 0.35, lenScore >= 0.5];
+  const passed = scores.filter(Boolean).length >= 2;
+
+  return {
+    passed,
+    keyScore: Math.round(keyScore * 100),
+    modelScore: Math.round(modelScore * 100),
+    detail: scores
+  };
+}
+
+// ── 12. Session Result Processing ────────────
+function processSessionResult(lessonIdx, sessionState) {
+  const sentence = LECTURES[lessonIdx];
+  const userModel = loadUserModel();
+
+  // 감정 가중치 기록
+  recordEmotionWeight(sentence.id, sentence.emo, userModel);
+
+  const result = {
+    correct: sessionState.correctCount >= 2,
+    responseTime: sessionState.confidence > 0
+      ? Math.max(1, 10 - sessionState.confidence) : 5,
+    score: sessionState.correctCount,
+    memoryStrength: sessionState.memoryStrength
+  };
+
+  updateMemory(userModel, sentence, result);
+
+  const nextSentence = selectNextSentence(userModel);
+  const nextPatterns = getNextRecommendedPatterns(userModel);
+
+  logEvent('SESSION_COMPLETE', {
+    score: result.score,
+    correct: result.correct,
+    memStr: sessionState.memoryStrength
+  });
+
+  return { userModel, nextSentence, nextPatterns, result };
+}
+
+// ── 13. Mastery Summary ───────────────────────
+function getMasterySummary(userModel) {
+  const entries = Object.entries(userModel.pattern_mastery);
+  if (!entries.length) return { avg:0, strong:0, weak:0, total:0 };
+  const avg = entries.reduce((s,[,v])=>s+v,0)/entries.length;
+  return {
+    avg: Math.round(avg*100),
+    strong: entries.filter(([,v])=>v>=0.7).length,
+    weak:   entries.filter(([,v])=>v<0.3).length,
+    total:  entries.length
+  };
+}
 
 // ════════════════════════════════════════════
 // GLOBAL STATE
@@ -493,6 +913,8 @@ function onCTA() {
 }
 
 function nextStep() {
+  logEvent('NEXT_STEP', {from: state.step});
+  clearStallDetection();
   if (state.step >= 10) {
     completLesson();
     return;
@@ -605,6 +1027,7 @@ function renderMeaningGuess(c, d, btn) {
 }
 
 function selectStep2(idx, correct) {
+  logEvent('STEP2_SELECT', {idx, correct, responseTime: (Date.now()-state.stepStartTime)/1000});
   document.querySelectorAll('[id^="opt2-"]').forEach(b => b.disabled = true);
   const ok = idx === correct;
   document.getElementById('opt2-' + idx).classList.add(ok ? 'ok' : 'no');
@@ -748,6 +1171,7 @@ function renderControlled(c, d, btn) {
 }
 
 function selectStep5(idx, correct) {
+  logEvent('STEP5_SELECT', {idx, correct, responseTime: (Date.now()-state.stepStartTime)/1000});
   document.querySelectorAll('[id^="opt5-"]').forEach(b => b.disabled = true);
   const ok = idx === correct;
   document.getElementById('opt5-' + idx).classList.add(ok ? 'ok' : 'no');
@@ -890,6 +1314,18 @@ function renderFreeOutput(c, d, btn) {
 
   btn.textContent = '제출하기 →';
   btn.className = 'cta';
+
+  // Stall Detection 시작 (5초 미입력 → 힌트)
+  setTimeout(() => startStallDetection(), 500);
+
+  // 입력 시작하면 stall 타이머 리셋
+  setTimeout(() => {
+    const inp = document.getElementById('free-inp');
+    if (inp) inp.addEventListener('input', () => {
+      clearStallDetection();
+      logEvent('FREE_INPUT_START');
+    }, { once: true });
+  }, 100);
 }
 
 function showFreeHint(level, hint1, hint2, model) {
@@ -940,37 +1376,42 @@ async function submitFreeOutput(val) {
 Evaluate meaning similarity. JSON only:
 {"pass":true|false,"feedback_kr":"2문장 피드백","model_answer":"${d.model_answer||l.s}"}`;
 
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:300, messages:[{role:'user',content:prompt}] })
-    });
-    const data = await res.json();
-    const ai = JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
+  // 1차: 로컬 의미 기반 평가 (패턴 + 핵심 단어 + 길이)
+  const d8 = state.lessonData?.STEP_8_Free_Output;
+  const sentence8 = LECTURES[state.lessonIdx];
+  const localEval = evaluateFreeOutput(val, sentence8, d8?.model_answer);
+  clearStallDetection();
+  logEvent('FREE_OUTPUT_SUBMIT', { valLen: val.length, localPass: localEval.passed });
 
-    if (ai.pass) { confetti(); playSound('correct'); addXP(20); }
-    else playSound('wrong');
+  const modelAns = d8?.model_answer || sentence8.s;
 
-    const fb = document.getElementById('fb8');
-    fb.style.display = 'block';
-    fb.innerHTML = `
-      <div style="background:${ai.pass?'rgba(0,196,154,0.09)':'rgba(255,61,127,0.07)'};border:2px solid ${ai.pass?'rgba(0,196,154,0.28)':'rgba(255,61,127,0.22)'};border-radius:var(--r);padding:14px 18px;margin-bottom:14px;">
-        <div style="font-size:1rem;font-weight:900;color:${ai.pass?'#006b54':'#a01040'};margin-bottom:8px;">${ai.pass?'🎉 훌륭해요!':'💪 조금만 더!'}</div>
-        <div style="background:var(--surf);border-radius:10px;padding:10px 14px;margin-bottom:8px;">
-          <div style="font-size:0.6rem;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">모범 답안</div>
-          <div style="font-size:0.95rem;font-weight:700;color:var(--txt);">${ai.model_answer}</div>
-        </div>
-        <div style="font-size:0.86rem;line-height:1.8;color:var(--txt);">${ai.feedback_kr}</div>
-        <button onclick="sp('${e(ai.model_answer)}','en')" style="margin-top:10px;background:var(--surf);border:1.5px solid var(--bdr);border-radius:10px;padding:6px 14px;font-family:inherit;font-size:0.78rem;font-weight:700;color:var(--acc);cursor:pointer;">🔊 듣기</button>
-      </div>`;
-
-    setState({ answered: true });
-    btn.disabled = false;
-    btn.textContent = '다음 →';
-  } catch(err) {
-    btn.disabled = false;
-    btn.textContent = '제출하기 →';
-    showToast('AI 연결 실패. 다시 시도해주세요.');
+  if (localEval.passed) {
+    // 로컬 통과 → 즉시 피드백 (API 불필요)
+    confetti(); playSound('correct'); addXP(20);
+    recordAnswer(true);
+    showFreeOutputResult(true, modelAns, `패턴 포함 ${localEval.keyScore}% · 핵심 단어 ${localEval.modelScore}% 일치해요.`, btn);
+  } else {
+    // 로컬 실패 → AI 정밀 평가
+    btn.textContent = 'AI 평가 중…'; btn.disabled = true;
+    const prompt = `Target: "${sentence8.s}" / Input: "${val}" / Model: "${modelAns}"
+Patterns: ${JSON.stringify(sentence8.patterns||[])}
+Evaluate meaning similarity. Be lenient if key patterns present.
+JSON only: {"pass":true|false,"feedback_kr":"2문장 피드백 (격려 포함)","model_answer":"${modelAns}"}`;
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:300, messages:[{role:'user',content:prompt}] })
+      });
+      const data = await res.json();
+      const ai = JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
+      if (ai.pass) { confetti(); playSound('correct'); addXP(20); recordAnswer(true); }
+      else { playSound('wrong'); recordAnswer(false); }
+      showFreeOutputResult(ai.pass, ai.model_answer, ai.feedback_kr, btn);
+    } catch(err) {
+      // API 실패시 관대하게 통과
+      playSound('correct'); addXP(10); recordAnswer(true);
+      showFreeOutputResult(true, modelAns, '좋은 시도예요! 모범 답안과 비교해보세요.', btn);
+    }
   }
 }
 
@@ -1131,6 +1572,11 @@ Rules: Return ONLY valid JSON. No markdown. No extra text. Korean must be natura
 function completLesson() {
   const l = LECTURES[state.lessonIdx];
 
+  // ── 엔진: 세션 결과 처리 ──
+  const { userModel, nextSentence, nextPatterns } = processSessionResult(state.lessonIdx, state);
+  state._nextSentence = nextSentence;
+  state._nextPatterns = nextPatterns;
+
   if (!S.done.includes(l.id)) {
     S.done.push(l.id);
     S.quiz_scores = S.quiz_scores || {};
@@ -1163,6 +1609,19 @@ function completLesson() {
       ${l.ckr}<br><i style="color:var(--acc);">"${l.cen}"</i>
     </div>
     ${S.done.length < LECTURES.length ? `<div style="font-size:0.85rem;color:var(--acc3);font-weight:700;">🔓 다음 표현이 열렸어요!</div>` : '<div style="font-size:0.85rem;color:var(--gold);font-weight:700;">🏆 모든 표현 완료!</div>'}
+    ${(()=>{
+      const ns = state._nextSentence;
+      if (ns && ns.id !== l.id) {
+        const um = loadUserModel();
+        const mastery = (ns.patterns||[]).reduce((s,p)=>s+(um.pattern_mastery[p]||0),0) / Math.max(1,(ns.patterns||[]).length);
+        return `<div style="background:rgba(108,63,255,0.06);border:2px solid rgba(108,63,255,0.14);border-radius:var(--r2);padding:14px 16px;margin-top:14px;cursor:pointer;" onclick="startLesson(${LECTURES.findIndex(x=>x.id===ns.id)})">
+          <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.1em;color:var(--acc);text-transform:uppercase;margin-bottom:6px;">🧠 AI 추천 다음 학습</div>
+          <div style="font-size:0.88rem;font-weight:700;color:var(--txt);margin-bottom:4px;">${ns.s}</div>
+          <div style="font-size:0.72rem;color:var(--mut);">숙달도 ${Math.round(mastery*100)}% · ${ns.cefr}</div>
+        </div>`;
+      }
+      return '';
+    })()}
   </div>`;
 
   // 별 순차 점등
@@ -1301,8 +1760,31 @@ function renderStats() {
   }).join('');
   document.getElementById('prog-list').innerHTML=LECTURES.map((l,i)=>{
     const done=S.done.includes(l.id), ul=unlocked(i);
-    return `<div class="pr"><span class="pn">${String(i+1).padStart(2,'0')}</span><span class="ps">${l.s}</span><span class="pst ${done?'done':'pend'}">${done?'✅':ul?'🔓':'🔒'}</span></div>`;
+    const um=loadUserModel();
+    const mastery=(l.patterns||[]).reduce((s,p)=>s+(um.pattern_mastery[p]||0),0)/Math.max(1,(l.patterns||[]).length);
+    const bar=Math.round(mastery*100);
+    return `<div class="pr">
+      <span class="pn">${String(i+1).padStart(2,'0')}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;">${l.s}</div>
+        <div style="height:5px;background:var(--surf);border-radius:3px;overflow:hidden;border:1px solid var(--bdr);">
+          <div style="height:100%;width:${bar}%;background:${bar>=70?'var(--acc3)':bar>=40?'var(--acc)':'var(--acc2)'};border-radius:3px;transition:width 0.4s;"></div>
+        </div>
+      </div>
+      <span class="pst ${done?'done':'pend'}" style="font-size:0.7rem;">${done?'✅':ul?'🔓':'🔒'} ${bar}%</span>
+    </div>`;
   }).join('');
+
+  // 패턴 mastery 요약
+  const um=loadUserModel();
+  const summary=getMasterySummary(um);
+  const masteryEl=document.getElementById('mastery-summary');
+  if(masteryEl) masteryEl.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+      <div class="sc"><div class="sn" style="font-size:1.5rem;">${summary.avg}%</div><div class="sl">평균 숙달도</div></div>
+      <div class="sc"><div class="sn" style="font-size:1.5rem;background:linear-gradient(135deg,var(--acc3),#00a070);-webkit-background-clip:text;">${summary.strong}</div><div class="sl">강한 패턴</div></div>
+      <div class="sc"><div class="sn" style="font-size:1.5rem;background:linear-gradient(135deg,var(--acc2),#cc2060);-webkit-background-clip:text;">${summary.weak}</div><div class="sl">약한 패턴</div></div>
+    </div>`;
 }
 
 // ════════════════════════════════════════════
@@ -1334,6 +1816,25 @@ function showToast(msg) {
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 
+
+function showFreeOutputResult(pass, modelAns, feedback, btn) {
+  const fb = document.getElementById('fb8');
+  if (fb) {
+    fb.style.display = 'block';
+    fb.innerHTML = `
+      <div style="background:${pass?'rgba(0,196,154,0.09)':'rgba(255,61,127,0.07)'};border:2px solid ${pass?'rgba(0,196,154,0.28)':'rgba(255,61,127,0.22)'};border-radius:var(--r);padding:14px 18px;">
+        <div style="font-size:1rem;font-weight:900;color:${pass?'#006b54':'#a01040'};margin-bottom:8px;">${pass?'🎉 훌륭해요!':'💪 조금만 더!'}</div>
+        <div style="background:var(--surf);border-radius:10px;padding:10px 14px;margin-bottom:8px;">
+          <div style="font-size:0.6rem;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">모범 답안</div>
+          <div style="font-size:0.95rem;font-weight:700;color:var(--txt);">${modelAns}</div>
+        </div>
+        <div style="font-size:0.86rem;line-height:1.8;color:var(--txt);">${feedback}</div>
+        <button onclick="sp('${e(modelAns)}','en')" style="margin-top:10px;background:var(--surf);border:1.5px solid var(--bdr);border-radius:10px;padding:6px 14px;font-family:inherit;font-size:0.78rem;font-weight:700;color:var(--acc);cursor:pointer;">🔊 듣기</button>
+      </div>`;
+  }
+  setState({ answered: true });
+  if (btn) { btn.disabled = false; btn.textContent = '다음 →'; }
+}
 // ════════════════════════════════════════════
 // UTIL
 // ════════════════════════════════════════════
