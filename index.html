@@ -418,16 +418,60 @@ function getNextLv() { const c=getLv(); const ni=LEVELS.findIndex(l=>l.lv===c.lv
 const state = {
   step: 1,
   subStep: 0,
-  userAnswer: null,
-  lessonData: null,   // AI 생성 10-step JSON
+
+  // 답변 추적
+  answers: {},         // {step: answer}
+  correctCount: 0,     // 맞은 개수
+  
+  // 몰입 지표
+  confidence: 0,       // 확신도 (빠를수록 높음)
+  hesitation: 0,       // 망설임 횟수
+  stepStartTime: 0,    // 스텝 시작 시간
+
+  // 레슨 데이터
+  lessonData: null,
   lessonIdx: -1,
   quizScore: 0,
-  answered: false
+  answered: false,
+
+  // 자유출력 힌트 단계 (0=자유, 1=힌트, 2=선택지)
+  freeHintLevel: 0,
+
+  // memoryStrength
+  memoryStrength: 'weak'  // weak / medium / strong
 };
 
 function setState(patch) {
   Object.assign(state, patch);
+  // 스텝 전환 시 시간 기록
+  if (patch.step !== undefined) {
+    state.stepStartTime = Date.now();
+  }
   render();
+}
+
+// 반응 시간 기록 → confidence 계산
+function recordAnswer(correct) {
+  const elapsed = (Date.now() - state.stepStartTime) / 1000;
+  if (correct) {
+    state.correctCount++;
+    if (elapsed < 3) state.confidence += 2;
+    else if (elapsed < 6) state.confidence += 1;
+    state.quizScore++;
+  } else {
+    state.hesitation++;
+    state.confidence = Math.max(0, state.confidence - 1);
+  }
+  // memoryStrength 업데이트
+  const ratio = state.correctCount / Math.max(1, state.step);
+  state.memoryStrength = ratio >= 0.8 ? 'strong' : ratio >= 0.5 ? 'medium' : 'weak';
+}
+
+// Next 버튼 없이 자동 진행
+function autoNext(delay = 1200) {
+  const btn = document.getElementById('cta-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '계속하는 중…'; }
+  setTimeout(() => nextStep(), delay);
 }
 
 // ── CTA 핸들러 ──
@@ -492,29 +536,52 @@ function render() {
   container.scrollTop = 0;
 }
 
-// ── STEP 1: Scene ──
+// ── STEP 1: Scene ── 자막 순차 등장 + 자동 재생
 function renderScene(c, d, l) {
   if (!d) return;
-  const dlg = (d.dialogue || []).map((dl, i) => `
-    ${i > 0 ? '<hr class="dlg-divider">' : ''}
-    <div class="dlg-speaker">${dl.speaker}</div>
-    <div class="dlg-line">${dl.line}</div>
-    <button class="dlg-tts" onclick="sp('${e(dl.line)}','en')">🔊 듣기</button>
-  `).join('');
+  const dlg = d.dialogue || [];
+  const btn = document.getElementById('cta-btn');
+  btn.disabled = true;
+  btn.textContent = '재생 중…';
+
+  // 대화 아이템 숨긴 상태로 렌더
+  const dlgHtml = dlg.map((dl, i) => `
+    <div class="dlg-item" id="dlg-${i}" style="opacity:0;transform:translateY(10px);transition:all 0.4s;margin-bottom:${i<dlg.length-1?'14px':'0'};">
+      ${i > 0 ? '<hr class="dlg-divider" style="margin-bottom:12px;">' : ''}
+      <div class="dlg-speaker">${dl.speaker}</div>
+      <div class="dlg-line">${dl.line}</div>
+      <button class="dlg-tts" onclick="sp('${e(dl.line)}','en')">🔊 듣기</button>
+    </div>`).join('');
 
   c.innerHTML = `<div class="stage-wrap">
     <div class="stage-badge purple">🎬 STEP 1 — 첫 노출</div>
     <img style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:var(--r2);margin-bottom:14px;box-shadow:var(--sh2);" src="images/${l.img}.jpg" onerror="this.style.display='none'" alt="">
-    <div class="card" style="margin-bottom:14px;">
+    <div class="card" style="margin-bottom:14px;opacity:0;transition:opacity 0.5s;" id="scene-ctx">
       <div style="font-size:0.82rem;color:var(--mut);line-height:1.8;">${d.situation_kr || l.scene}</div>
     </div>
-    <div class="card">${dlg}</div>
+    <div class="card" id="dlg-wrap">${dlgHtml}</div>
   </div>`;
 
-  // 1초 후 자동으로 대화 TTS
+  // 순차 등장 + TTS
   setTimeout(() => {
-    if (d.dialogue && d.dialogue[0]) sp(d.dialogue[0].line, 'en');
-  }, 600);
+    const ctx = document.getElementById('scene-ctx');
+    if (ctx) ctx.style.opacity = '1';
+  }, 400);
+
+  dlg.forEach((dl, i) => {
+    setTimeout(() => {
+      const el = document.getElementById('dlg-' + i);
+      if (el) { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; }
+      sp(dl.line, 'en');
+      // 마지막 대화 후 버튼 활성화
+      if (i === dlg.length - 1) {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = '이해했어요 →';
+        }, 1800);
+      }
+    }, 600 + i * 2200);
+  });
 }
 
 // ── STEP 2: Meaning Guess ──
@@ -542,12 +609,24 @@ function selectStep2(idx, correct) {
   const ok = idx === correct;
   document.getElementById('opt2-' + idx).classList.add(ok ? 'ok' : 'no');
   if (!ok) document.getElementById('opt2-' + correct).classList.add('ok');
+  recordAnswer(ok);
   const fb = document.getElementById('fb2');
   fb.className = `fb show ${ok ? 'ok' : 'no'}`;
-  fb.textContent = ok ? '✅ 맞아요! 좋은 추론이에요.' : `❌ 정답은 "${document.getElementById('opt2-' + correct).textContent}"예요.`;
-  if (ok) { addXP(10); playSound('correct'); } else playSound('wrong');
-  setState({ answered: true });
-  document.getElementById('cta-btn').disabled = false;
+  // 감정 피드백
+  if (ok) {
+    fb.innerHTML = `✅ <strong>맞아요!</strong> 의미를 정확히 파악했어요. 자신감 +${state.confidence}`;
+    addXP(10); playSound('correct');
+    autoNext(1400); // 정답이면 자동 진행
+  } else {
+    const correctTxt = document.getElementById('opt2-' + correct).textContent;
+    fb.innerHTML = `🤔 이 표현이 헷갈리는 이유: <strong>"${correctTxt}"</strong>가 정답이에요.<br><span style="font-size:0.8rem;color:var(--mut);">틀려도 괜찮아요. 다음으로 가봐요.</span>`;
+    playSound('wrong');
+    setTimeout(() => {
+      setState({ answered: true });
+      document.getElementById('cta-btn').disabled = false;
+      document.getElementById('cta-btn').textContent = '계속하기 →';
+    }, 1200);
+  }
 }
 
 // ── STEP 3: Chunking ──
@@ -574,39 +653,77 @@ function renderChunking(c, d, l) {
     </div>
     <div class="chunks-row">${tags}</div>
     <div>${meanings}</div>
+    <div style="font-size:0.8rem;color:var(--mut);text-align:center;margin-top:12px;">👆 모든 덩어리를 눌러보세요</div>
   </div>`;
+  // 청크 다 열기 전까지 버튼 비활성
+  document.getElementById('cta-btn').disabled = true;
+  document.getElementById('cta-btn').textContent = '덩어리를 모두 눌러주세요';
 }
 
 function revealChunk(i) {
   const tag = document.getElementById('ck-' + i);
   const meaning = document.getElementById('cm-' + i);
-  tag.classList.toggle('revealed');
-  meaning.classList.toggle('show');
-  sp(tag.textContent, 'en');
+  if (!tag.classList.contains('revealed')) {
+    tag.classList.add('revealed');
+    meaning.classList.add('show');
+    sp(tag.textContent, 'en');
+    // 모든 청크가 열렸는지 확인
+    const total = document.querySelectorAll('.chunk-tag').length;
+    const revealed = document.querySelectorAll('.chunk-tag.revealed').length;
+    if (revealed === total) {
+      setTimeout(() => {
+        document.getElementById('cta-btn').disabled = false;
+        document.getElementById('cta-btn').textContent = '패턴 배우기 →';
+      }, 600);
+    }
+  } else {
+    // 이미 열린 건 TTS만
+    sp(tag.textContent, 'en');
+  }
 }
 
-// ── STEP 4: Pattern ──
+// ── STEP 4: Pattern ── 슬롯 순차 애니메이션
 function renderPattern(c, d) {
   if (!d) return;
   const slots = d.slots || {};
-  const slotHtml = Object.entries(slots).map(([k, vals]) => `
-    <div class="slot-box">
-      <div class="slot-label">${k}</div>
+  
+  // 패턴 문자열에서 SLOT 강조
+  const patternHighlighted = (d.pattern || '').replace(
+    /[A-Z_]{2,}/g,
+    m => `<span id="slot-highlight" style="background:rgba(255,255,255,0.25);border-radius:8px;padding:2px 8px;border:2px solid rgba(255,255,255,0.5);display:inline-block;animation:slotPulse 1.5s infinite;">${m}</span>`
+  );
+
+  const slotHtml = Object.entries(slots).map(([k, vals], si) => `
+    <div class="slot-box" id="slot-box-${si}" style="opacity:0;transform:translateY(12px);transition:all 0.4s;">
+      <div class="slot-label">${k} 슬롯</div>
       <div class="slot-chips">
-        ${(vals||[]).map(v => `<span class="slot-chip" onclick="sp('${e(v)}','en')">${v}</span>`).join('')}
+        ${(vals||[]).map(v => `<span class="slot-chip" onclick="sp('${e(v)}','en');this.style.background='var(--acc)';this.style.color='white';">${v}</span>`).join('')}
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 
   c.innerHTML = `<div class="stage-wrap">
+    <style>@keyframes slotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05);background:rgba(255,255,255,0.35);}}</style>
     <div class="stage-badge purple">📐 STEP 4 — 패턴 인식</div>
-    <div class="pattern-hero">
+    <div class="pattern-hero" id="ph-anim" style="opacity:0;transition:opacity 0.5s;">
       <div style="font-size:0.65rem;font-weight:800;letter-spacing:0.1em;color:rgba(255,255,255,0.6);text-transform:uppercase;margin-bottom:8px;">핵심 패턴</div>
-      <div class="pattern-str">${d.pattern || ''}</div>
-      <div class="pattern-exp">${d.explanation_kr || ''}</div>
+      <div class="pattern-str">${patternHighlighted}</div>
+      <div class="pattern-exp" style="margin-top:8px;">${d.explanation_kr || ''}</div>
     </div>
+    <div style="font-size:0.8rem;color:var(--mut);text-align:center;margin-bottom:12px;">👆 슬롯 예시를 눌러 발음 들어보세요</div>
     ${slotHtml}
   </div>`;
+
+  // 순차 등장
+  setTimeout(() => {
+    const ph = document.getElementById('ph-anim');
+    if (ph) ph.style.opacity = '1';
+  }, 200);
+  Object.keys(slots).forEach((_, i) => {
+    setTimeout(() => {
+      const el = document.getElementById('slot-box-' + i);
+      if (el) { el.style.opacity='1'; el.style.transform='translateY(0)'; }
+    }, 500 + i * 400);
+  });
 }
 
 // ── STEP 5: Controlled Practice ──
@@ -635,12 +752,12 @@ function selectStep5(idx, correct) {
   const ok = idx === correct;
   document.getElementById('opt5-' + idx).classList.add(ok ? 'ok' : 'no');
   if (!ok) document.getElementById('opt5-' + correct).classList.add('ok');
+  recordAnswer(ok);
   const fb = document.getElementById('fb5');
   fb.className = `fb show ${ok ? 'ok' : 'no'}`;
   fb.textContent = ok ? '✅ 정확해요!' : `❌ 정답: "${document.getElementById('opt5-' + correct).textContent}"`;
-  if (ok) { addXP(10); playSound('correct'); } else playSound('wrong');
-  setState({ answered: true });
-  document.getElementById('cta-btn').disabled = false;
+  if (ok) { addXP(10); playSound('correct'); autoNext(1000); }  // 정답이면 즉시 자동
+  else { playSound('wrong'); setTimeout(()=>{ setState({answered:true}); document.getElementById('cta-btn').disabled=false; document.getElementById('cta-btn').textContent='계속하기 →'; }, 1000); }
 }
 
 // ── STEP 6: Variation ──
@@ -663,12 +780,20 @@ function renderVariation(c, d) {
     ${slides}
   </div>`;
 
-  // 순차 슬라이드 노출
+  // 0.8초 간격 리듬 노출 + 마지막 후 버튼 활성
+  document.getElementById('cta-btn').disabled = true;
+  document.getElementById('cta-btn').textContent = '패턴을 느껴보세요…';
   sents.forEach((_, i) => {
     setTimeout(() => {
       const el = document.getElementById('vs-' + i);
       if (el) { el.classList.add('show'); sp(sents[i], 'en'); }
-    }, i * 1200);
+      if (i === sents.length - 1) {
+        setTimeout(() => {
+          document.getElementById('cta-btn').disabled = false;
+          document.getElementById('cta-btn').textContent = '다음 →';
+        }, 1800);
+      }
+    }, 300 + i * 900);  // 0.9초 간격 (TTS 고려)
   });
 }
 
@@ -699,17 +824,27 @@ function selectStep7(idx, selected, acceptable) {
   const acc = Array.isArray(acceptable) ? acceptable : [];
   const ok = acc.some(a => selected.toLowerCase().includes(a.toLowerCase()) || a.toLowerCase().includes(selected.toLowerCase()));
   document.getElementById('opt7-' + idx).classList.add(ok ? 'ok' : 'sel');
+  recordAnswer(ok);
   const fb = document.getElementById('fb7');
   fb.className = `fb show ${ok ? 'ok' : 'no'}`;
   fb.textContent = ok ? `✅ "${selected}" 정확해요!` : `💡 좋은 시도! 예시: ${acc[0] || ''}`;
-  if (ok) { addXP(10); playSound('correct'); } else playSound('wrong');
-  setState({ answered: true });
-  document.getElementById('cta-btn').disabled = false;
+  if (ok) { addXP(10); playSound('correct'); autoNext(1200); }
+  else { playSound('wrong'); setTimeout(()=>{ setState({answered:true}); document.getElementById('cta-btn').disabled=false; document.getElementById('cta-btn').textContent='계속하기 →'; }, 1000); }
 }
 
-// ── STEP 8: Free Output ──
+// ── STEP 8: Free Output ── 3단계 fallback
 function renderFreeOutput(c, d, btn) {
   if (!d) return;
+  state.freeHintLevel = 0;
+
+  const l = LECTURES[state.lessonIdx];
+  // 힌트 선택지 (모범 답안의 앞부분 제공)
+  const modelWords = (d.model_answer || l.s).split(' ');
+  const hints = [
+    modelWords.slice(0, Math.ceil(modelWords.length/3)).join(' ') + '...',
+    modelWords.slice(0, Math.ceil(modelWords.length/2)).join(' ') + '...',
+    d.model_answer || l.s
+  ];
 
   c.innerHTML = `<div class="stage-wrap">
     <div class="stage-badge pink">🗣️ STEP 8 — 자유 출력</div>
@@ -717,9 +852,39 @@ function renderFreeOutput(c, d, btn) {
       <div style="font-size:0.9rem;line-height:1.8;">${d.situation_kr || ''}</div>
     </div>
     <div style="font-size:0.88rem;font-weight:700;color:var(--txt);margin-bottom:12px;">${d.prompt_kr || '이 상황에서 영어로 말해보세요'}</div>
-    <div class="card" style="margin-bottom:14px;">
-      <textarea class="free-inp" id="free-inp" placeholder="영어로 자유롭게 써보세요..." rows="3"></textarea>
+    
+    <!-- 1차: 자유 입력 -->
+    <div id="free-stage-0">
+      <div class="card" style="margin-bottom:10px;">
+        <textarea class="free-inp" id="free-inp" placeholder="영어로 자유롭게 써보세요..." rows="3"></textarea>
+      </div>
+      <button onclick="showFreeHint(1,'${e(hints[0])}','${e(hints[1])}','${e(d.model_answer||l.s)}')" 
+        style="background:none;border:none;font-family:inherit;font-size:0.78rem;color:var(--mut);cursor:pointer;padding:4px 0;text-decoration:underline;">
+        💡 힌트가 필요해요
+      </button>
     </div>
+    
+    <!-- 2차: 힌트 (처음엔 숨김) -->
+    <div id="free-stage-1" style="display:none;">
+      <div class="card" style="margin-bottom:12px;background:rgba(108,63,255,0.06);border-color:rgba(108,63,255,0.2);">
+        <div style="font-size:0.65rem;font-weight:800;color:var(--acc);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">💡 힌트</div>
+        <div style="font-size:0.95rem;font-weight:700;color:var(--txt);" id="hint-txt"></div>
+      </div>
+      <div class="card" style="margin-bottom:10px;">
+        <textarea class="free-inp" id="free-inp2" placeholder="힌트를 참고해서 완성해보세요..." rows="3"></textarea>
+      </div>
+      <button onclick="showFreeHint(2,'','','${e(d.model_answer||l.s)}')"
+        style="background:none;border:none;font-family:inherit;font-size:0.78rem;color:var(--mut);cursor:pointer;padding:4px 0;text-decoration:underline;">
+        📝 선택지로 볼게요
+      </button>
+    </div>
+    
+    <!-- 3차: 선택지 (처음엔 숨김) -->
+    <div id="free-stage-2" style="display:none;">
+      <div style="font-size:0.82rem;color:var(--mut);margin-bottom:10px;font-weight:600;">가장 가까운 것을 선택해주세요:</div>
+      <div id="free-opts"></div>
+    </div>
+    
     <div class="ai-fb" id="fb8" style="display:none;"></div>
   </div>`;
 
@@ -727,7 +892,42 @@ function renderFreeOutput(c, d, btn) {
   btn.className = 'cta';
 }
 
+function showFreeHint(level, hint1, hint2, model) {
+  state.freeHintLevel = level;
+  if (level === 1) {
+    document.getElementById('free-stage-0').style.display='none';
+    document.getElementById('free-stage-1').style.display='block';
+    document.getElementById('hint-txt').textContent = hint1;
+  } else if (level === 2) {
+    document.getElementById('free-stage-1').style.display='none';
+    document.getElementById('free-stage-2').style.display='block';
+    // 선택지 생성
+    const l = LECTURES[state.lessonIdx];
+    const opts3 = [model, l.s, '잘 모르겠어요 (건너뛸게요)'];
+    document.getElementById('free-opts').innerHTML = opts3.map((o,i) =>
+      `<button class="opt" onclick="selectFreeOpt(this,'${e(o)}','${e(model)}')">${o}</button>`
+    ).join('');
+    document.getElementById('cta-btn').style.display='none';
+  }
+}
+
+function selectFreeOpt(btn, selected, model) {
+  document.querySelectorAll('#free-opts .opt').forEach(b=>b.disabled=true);
+  const ok = selected === model;
+  btn.classList.add(ok ? 'ok' : 'sel');
+  if (ok) { addXP(5); playSound('correct'); } 
+  document.getElementById('cta-btn').style.display='block';
+  setState({ answered: true });
+  document.getElementById('cta-btn').textContent = '계속하기 →';
+  document.getElementById('cta-btn').disabled = false;
+}
+
 async function submitFreeOutput(val) {
+  // freeHintLevel에 따라 입력창 분기
+  if (state.freeHintLevel === 1) {
+    const inp2 = document.getElementById('free-inp2');
+    if (inp2) val = inp2.value.trim();
+  }
   if (!val) { showToast('영어로 입력해주세요'); return; }
   const btn = document.getElementById('cta-btn');
   btn.disabled = true;
@@ -821,6 +1021,13 @@ function renderMemory(c, d) {
     <div class="card" style="text-align:center;">
       <div style="font-size:0.65rem;font-weight:800;letter-spacing:0.1em;color:var(--mut);text-transform:uppercase;margin-bottom:8px;">🧠 핵심 기억 포인트</div>
       <div style="font-size:0.95rem;font-weight:700;color:var(--txt);line-height:1.6;">${d.memory_anchor_kr || ''}</div>
+    </div>
+    <div style="background:${state.memoryStrength==='strong'?'rgba(0,196,154,0.1)':state.memoryStrength==='medium'?'rgba(108,63,255,0.08)':'rgba(245,166,35,0.08)'};border:2px solid ${state.memoryStrength==='strong'?'rgba(0,196,154,0.25)':state.memoryStrength==='medium'?'rgba(108,63,255,0.18)':'rgba(245,166,35,0.22)'};border-radius:var(--r2);padding:14px;text-align:center;margin-top:12px;">
+      <div style="font-size:0.7rem;font-weight:800;color:var(--mut);margin-bottom:4px;">이번 학습 기억 강도</div>
+      <div style="font-size:1.1rem;font-weight:900;color:${state.memoryStrength==='strong'?'var(--acc3)':state.memoryStrength==='medium'?'var(--acc)':'var(--gold)'};">
+        ${state.memoryStrength==='strong'?'💪 강함':'medium'===state.memoryStrength?'📈 보통':'🌱 약함'}
+        — 정답률 ${Math.round(state.correctCount/Math.max(state.step,1)*100)}%
+      </div>
     </div>
   </div>`;
 }
